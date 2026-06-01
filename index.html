@@ -1,279 +1,198 @@
 <!DOCTYPE html>
 <html lang="tr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FIX Consulting - İhracat Raporu</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4ff;min-height:100vh}
-  .header{background:linear-gradient(135deg,#1a3a8f,#2563eb);color:#fff;padding:20px 30px}
-  .header h1{font-size:1.5rem;font-weight:700}
-  .header p{font-size:.85rem;opacity:.8;margin-top:4px}
-  .steps{display:flex;gap:0;background:#fff;border-bottom:1px solid #e5e7eb;padding:0 30px;overflow-x:auto}
-  .step{padding:12px 20px;font-size:.8rem;color:#9ca3af;display:flex;align-items:center;gap:6px;white-space:nowrap;border-bottom:2px solid transparent}
-  .step.on{color:#2563eb;border-bottom-color:#2563eb;font-weight:600}
-  .step.done{color:#16a34a}
-  .step.err{color:#dc2626}
-  .main{max-width:700px;margin:40px auto;padding:0 20px}
-  .card{background:#fff;border-radius:16px;padding:36px;box-shadow:0 2px 16px rgba(0,0,0,.08)}
-  label{display:block;font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-  .hint{font-size:.75rem;color:#6b7280;margin-top:4px;margin-bottom:16px}
-  input[type=text]{width:100%;padding:12px 16px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:.95rem;outline:none;transition:border .2s}
-  input[type=text]:focus{border-color:#2563eb}
-  .tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-  .tab{padding:8px 16px;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;cursor:pointer;font-size:.82rem;color:#374151;transition:all .2s}
-  .tab.on{background:#2563eb;color:#fff;border-color:#2563eb}
-  .sep{height:1px;background:#f3f4f6;margin:24px 0}
-  button#btn{width:100%;padding:16px;background:linear-gradient(135deg,#1a3a8f,#2563eb);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:24px}
-  button#btn:disabled{opacity:.6;cursor:not-allowed}
-  #lb{display:none;margin-top:24px;background:#f8faff;border:1px solid #dbeafe;border-radius:12px;padding:16px}
-  #lb h3{font-size:.85rem;color:#1e40af;margin-bottom:10px}
-  #ll{max-height:200px;overflow-y:auto;font-size:.8rem;font-family:monospace}
-  .log-ok{color:#16a34a}.log-er{color:#dc2626}.log-inf{color:#374151}
-  #res{margin-top:24px}
-  .res-card{background:#fff;border:1px solid #d1fae5;border-radius:12px;padding:24px}
-  .res-card h2{color:#065f46;margin-bottom:16px}
-  .res-links{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
-  .res-links a{padding:10px 20px;border-radius:8px;text-decoration:none;font-size:.85rem;font-weight:600}
-  .link-doc{background:#2563eb;color:#fff}
-  .link-folder{background:#e0f2fe;color:#0369a1}
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
-  .stat{background:#f0f9ff;border-radius:10px;padding:16px;text-align:center}
-  .stat-val{font-size:1.1rem;font-weight:700;color:#1e40af}
-  .stat-lbl{font-size:.72rem;color:#64748b;margin-top:4px;text-transform:uppercase}
-  table{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:10px}
-  th{background:#f1f5f9;padding:8px 12px;text-align:left;color:#475569;font-weight:600}
-  td{padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#374151}
-  tr:hover td{background:#f8faff}
-</style>
-</head>
-<body>
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FIX Consulting - İhracat Raporu</title>
+ <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4ff;min-height:100vh}
+    .header{background:linear-gradient(135deg,#1a3a8f,#2563eb);color:#fff;padding:20px 30px}
+    .header h1{font-size:1.5rem;font-weight:700}
+    .header p{font-size:.85rem;opacity:.8;margin-top:4px}
+    .steps{display:flex;gap:0;background:#fff;border-bottom:1px solid #e5e7eb;padding:0 30px;overflow-x:auto}
+    .step{padding:12px 20px;font-size:.8rem;color:#9ca3af;display:flex;align-items:center;gap:6px;white-space:nowrap;border-bottom:2px solid transparent}
+    .step.on{color:#2563eb;border-bottom-color:#2563eb;font-weight:600}
+    .step.done{color:#16a34a}
+    .step.err{color:#dc2626}
+    .main{max-width:700px;margin:40px auto;padding:0 20px}
+    .card{background:#fff;border-radius:16px;padding:36px;box-shadow:0 2px 16px rgba(0,0,0,.08)}
+    label{display:block;font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+    .hint{font-size:.75rem;color:#6b7280;margin-top:4px;margin-bottom:16px}
+    input[type=text]{width:100%;padding:12px 16px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:.95rem;outline:none;transition:border .2s}
+    input[type=text]:focus{border-color:#2563eb}
+    .tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+    .tab{padding:8px 16px;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;cursor:pointer;font-size:.82rem;color:#374151;transition:all .2s}
+    .tab.on{background:#2563eb;color:#fff;border-color:#2563eb}
+    .sep{height:1px;background:#f3f4f6;margin:24px 0}
+    button#btn{width:100%;padding:16px;background:linear-gradient(135deg,#1a3a8f,#2563eb);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:24px}
+    button#btn:disabled{opacity:.6;cursor:not-allowed}
+    #lb{display:none;margin-top:24px;background:#f8faff;border:1px solid #dbeafe;border-radius:12px;padding:16px}
+    #lb h3{font-size:.85rem;color:#1e40af;margin-bottom:10px}
+    #ll{max-height:200px;overflow-y:auto;font-size:.8rem;font-family:monospace}
+    .log-ok{color:#16a34a}.log-er{color:#dc2626}.log-inf{color:#374151}
+    #res{margin-top:24px}
+    .res-card{background:#fff;border:1px solid #d1fae5;border-radius:12px;padding:24px}
+    .res-card h2{color:#065f46;margin-bottom:16px}
+    .res-links{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+    .res-links a{padding:10px 20px;border-radius:8px;text-decoration:none;font-size:.85rem;font-weight:600}
+    .link-doc{background:#2563eb;color:#fff}
+    .link-folder{background:#e0f2fe;color:#0369a1}
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+    .stat{background:#f0f9ff;border-radius:10px;padding:16px;text-align:center}
+    .stat-val{font-size:1.1rem;font-weight:700;color:#1e40af}
+    .stat-lbl{font-size:.72rem;color:#64748b;margin-top:4px;text-transform:uppercase}
+    table{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:10px}
+    th{background:#f1f5f9;padding:8px 12px;text-align:left;color:#475569;font-weight:600}
+    td{padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#374151}
+    tr:hover td{background:#f8faff}
+  </style>
+ </head>
+ <body>
+  <div class="header">
+     <h1>FIX Consulting — Otomatik İhracat Raporu</h1>
+    <p>Firma Adı + Ürün/GTİP → AI Analiz → Drive</p>
+  </div>div>
+ <div class="steps">
+   <div class="step" id="s0">🔍 GTİP</div>div>
+   <div class="step" id="s1">📊 Pazar</div>div>
+   <div class="step" id="s2">🤖 AI İçerik</div>div>
+   <div class="step" id="s3">☁️ Kaydediliyor</div>div>
+   <div class="step" id="s4">✅ Hazır</div>div>
+ </div>div>
+ <div class="main">
+   <div class="card">
+       <label>🏢 Müşteri / Firma Adı</label>
+       <input type="text" id="firma" placeholder="örnek: Arçelik, CMK Kağıt, ABC Ltd...">
+       <p class="hint">Dosya adı: <strong>FİRMA ADI - ON CALISMA</strong> olarak kaydedilir</p>
+       <div class="sep"></div>div>
+       <label>📦 Ürün Adı / 12 Haneli GTİP / Website</label>
+       <div class="tabs">
+             <button class="tab on" id="t-u" onclick="setTab('u')">🏭 Ürün Adı</button>button>
+             <button class="tab" id="t-g" onclick="setTab('g')">🔢 GTİP (12 hane)</button>button>
+             <button class="tab" id="t-w" onclick="setTab('w')">🌐 Web Sitesi</button>button>
+       </div>div>
+       <input type="text" id="inp" placeholder="dökme demir tava, çelik boru...">
+       <button id="btn" onclick="run()">🚀 Raporu Otomatik Hazırla</button>button>
+   </div>div>
+   <div id="lb"><h3>⏳ İşlem Durumu</h3><div id="ll"></div>div></div>div>
+   <div id="res"></div>div>
+ </div>div>
+ <script>
+  var FOLDER_URL = 'https://drive.google.com/drive/folders/1WaBrSm7Ey3WUq3K3foRITFiuKdzltwer';
+  var mode = 'u';
+  var running = false;
 
-<div class="header">
-  <h1>FIX Consulting — Otomatik İhracat Raporu</h1>
-  <p>Firma Adı + Ürün/GTİP → AI Analiz → Drive</p>
-</div>
-
-<div class="steps">
-  <div class="step" id="s0">🔍 GTİP</div>
-  <div class="step" id="s1">📊 Pazar</div>
-  <div class="step" id="s2">🤖 AI İçerik</div>
-  <div class="step" id="s3">☁️ Kaydediliyor</div>
-  <div class="step" id="s4">✅ Hazır</div>
-</div>
-
-<div class="main">
-  <div class="card">
-    <label>🏢 Müşteri / Firma Adı</label>
-    <input type="text" id="firma" placeholder="örnek: Arçelik, CMK Kağıt, ABC Ltd...">
-    <p class="hint">Dosya adı: <strong>FİRMA ADI - ON CALISMA</strong> olarak kaydedilir</p>
-
-    <div class="sep"></div>
-
-    <label>📦 Ürün Adı / 12 Haneli GTİP / Website</label>
-    <div class="tabs">
-      <button class="tab on" id="t-u" onclick="setTab('u')">🏭 Ürün Adı</button>
-      <button class="tab" id="t-g" onclick="setTab('g')">🔢 GTİP (12 hane)</button>
-      <button class="tab" id="t-w" onclick="setTab('w')">🌐 Web Sitesi</button>
-    </div>
-    <input type="text" id="inp" placeholder="dökme demir tava, çelik boru...">
-
-    <button id="btn" onclick="run()">🚀 Raporu Otomatik Hazırla</button>
-  </div>
-
-  <div id="lb">
-    <h3>⏳ İşlem Durumu</h3>
-    <div id="ll"></div>
-  </div>
-
-  <div id="res"></div>
-</div>
-
-<script>
-var APPS_URL = "https://script.google.com/macros/s/AKfycbxZbMI8glMm-s41opBmGkm9ENl2-HLRaahx5f3HCoaGxvtudjobGLjmhl5biamUZIxGdA/exec";
-var FOLDER_URL = "https://drive.google.com/drive/folders/1WaBrSm7Ey3WUq3K3foRITFiuKdzltwer";
-var mode = 'u';
-var running = false;
-
-function setTab(m) {
-  mode = m;
-  ['u','g','w'].forEach(function(x) {
-    document.getElementById('t-'+x).className = 'tab' + (x===m?' on':'');
-  });
-  var ph = {u:'dökme demir tava, çelik boru, tekstil ipliği...', g:'480255901000 (12 haneli GTİP)', w:'www.firmam.com...'};
-  document.getElementById('inp').placeholder = ph[m];
-}
-
-function ss(n) {
-  for (var i=0; i<5; i++) {
-    var e = document.getElementById('s'+i);
-    e.className = 'step' + (i<n?' done': i===n?' on':'');
-  }
-}
-
-function lg(msg, type) {
-  var d = document.createElement('div');
-  d.className = 'log-' + (type||'inf');
-  d.textContent = msg;
-  var ll = document.getElementById('ll');
-  ll.appendChild(d);
-  ll.scrollTop = ll.scrollHeight;
-}
-
-async function ai(system, user) {
-  var r = await fetch('/api/ai', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({system: system, user: user})
-  });
-  var d = await r.json();
-  if (d.error) throw new Error(d.error);
-  return d.text || '';
-}
-
-function pj(s) {
-  try {
-    var clean = s.replace(/```json/g,'').replace(/```/g,'').trim();
-    return JSON.parse(clean);
-  } catch(e) {
-    console.error('JSON parse hatası:', e.message, 'Girdi:', s.substring(0,200));
-    throw new Error('AI geçersiz JSON döndü: ' + s.substring(0,100));
-  }
-}
-
-async function postApps(payload, retries) {
-  retries = retries || 3;
-  for (var i=0; i<retries; i++) {
-    try {
-      var r = await fetch(APPS_URL, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(payload)
-      });
-      var rs = await r.json();
-      if (rs.durum === 'ok') return rs;
-      if (i < retries-1) {
-        lg('Apps Script yanıtı bekleniyor... (' + (i+1) + ')');
-        await new Promise(function(res){setTimeout(res, (i+1)*5000);});
-        continue;
-      }
-      throw new Error(rs.mesaj || JSON.stringify(rs));
-    } catch(e) {
-      if (i === retries-1) throw e;
-      await new Promise(function(res){setTimeout(res, 3000);});
-    }
-  }
-  throw new Error('Apps Script bağlanamadı');
-}
-
-function temizAd(s) {
-  var tr = {'ş':'S','Ş':'S','ı':'I','İ':'I','ğ':'G','Ğ':'G','ü':'U','Ü':'U','ö':'O','Ö':'O','ç':'C','Ç':'C'};
-  var r = s.replace(/[şŞıİğĞüÜöÖçÇ]/g, function(c){return tr[c]||c;});
-  return r.toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/ +/g,' ').trim();
-}
-
-async function run() {
-  if (running) return;
-  var inp = document.getElementById('inp').value.trim();
-  var firma = document.getElementById('firma').value.trim();
-  if (!inp) { alert('Lütfen ürün adı / GTİP / website giriniz!'); return; }
-  if (!firma) { alert('Lütfen müşteri / firma adı giriniz!'); return; }
-
-  running = true;
-  var btn = document.getElementById('btn');
-  btn.disabled = true;
-  btn.textContent = '⏳ İşleniyor...';
-  document.getElementById('ll').innerHTML = '';
-  document.getElementById('lb').style.display = 'block';
-  document.getElementById('res').innerHTML = '';
-  ss(0);
-
-  try {
-    // ADIM 1: GTİP belirle
-    lg('GTİP belirleniyor...');
-    var gtipSys = 'Sen bir GTIP/HS kodu uzmanısın. Kullanıcının verdiği ürün tanımı, GTIP numarası veya websiteden 12 haneli Türkiye GTIP kodunu belirle.\n\nKURALLAR:\n- Eğer kullanıcı 12 haneli sayı girdiyse, o sayı zaten GTIP\'dir, aynen kullan\n- Eğer ürün adı girdiyse, en uygun 12 haneli GTIP\'i bul\n- hs12: tam 12 haneli (örnek: "480255901000")\n- hs6: ilk 6 hane (örnek: "480255")\n- hs2: ilk 2 hane (örnek: "48")\n- aciklama: ürünün kısa İngilizce açıklaması (max 60 karakter)\n- urunAdi: ürünün Türkçe kısa adı (max 20 karakter, büyük harf, sadece A-Z 0-9 boşluk)\n\nSADECE JSON dön, başka hiçbir şey yazma:\n{"hs12":"...","hs6":"...","hs2":"...","aciklama":"...","urunAdi":"..."}';
-    var g = pj(await ai(gtipSys, 'Girdi (mod:' + mode + '): ' + inp));
-    if (!g.hs12 || g.hs12.length < 6) throw new Error('Geçersiz GTIP: ' + JSON.stringify(g));
-    if (g.hs12.length < 12) g.hs12 = g.hs12.replace(/\D/g,'').padEnd(12,'0');
-    lg('✅ GTİP: ' + g.hs12 + ' - ' + g.aciklama, 'ok');
-
-    // ADIM 2: Pazar verisi
-    ss(1);
-    lg('Pazar verisi analiz ediliyor...');
-    var pazarSys = 'Sen bir ihracat analisti ve ticaret veri uzmanısın. Verilen 12 haneli Türkiye GTIP kodu için ihracat pazar analizini yap.\n\nTANIMLAR:\n- worldTotal: Türkiye\'nin bu GTIPten toplam yıllık ihracatı (USD, binler cinsinden)\n- ulkeler: En fazla ihracat yapılan ilk 10 ülke listesi\n\nSADECE JSON dön:\n{"worldTotal":123456,"ulkeler":[{"sira":1,"ad":"Ülke","hacim":12345,"yuzde":10.5}]}';
-    var t = pj(await ai(pazarSys, 'GTIP: ' + g.hs12 + ' Ürün: ' + g.urunAdi));
-    if (!t.ulkeler || t.ulkeler.length < 3) throw new Error('Pazar verisi eksik');
-    lg('✅ ' + t.ulkeler.length + ' ülke, Toplam: $' + ((t.worldTotal||0)*1000).toLocaleString('tr-TR') + ' USD', 'ok');
-
-    // ADIM 3: Sektörler ve firmalar
-    ss(2);
-    lg('Sektörler ve firmalar üretiliyor...');
-    var icSys = 'Sen FIX Consulting\'in uzman ihracat danışmanısın. Verilen ürün ve hedef pazarlar için gerçek potansiyel alıcı firmalar ve hedef sektörler belirle.\n\nSADECE JSON dön:\n{"sektorler":[{"ad":"Sektör","neden":"Kısa neden"}],"firmalar":[{"ad":"Firma","ulke":"Ülke","website":"www.ornek.com"}]}';
-    var icUser = 'Ürün: ' + g.urunAdi + ' GTIP: ' + g.hs12 + ' Hedef: ' + t.ulkeler.slice(0,5).map(function(u){return u.ad;}).join(', ');
-    var ic = pj(await ai(icSys, icUser));
-    if (!ic.sektorler || !ic.firmalar || ic.firmalar.length < 3) throw new Error('Sektör/firma verisi eksik');
-    lg('✅ ' + ic.sektorler.length + ' sektör + ' + ic.firmalar.length + ' firma', 'ok');
-
-    // ADIM 4: Apps Script'e gönder
-    ss(3);
-    var firmaTemiz = temizAd(firma);
-    var dosyaAdi = firmaTemiz + ' - ON CALISMA';
-    var toplamStr = ((t.worldTotal||0)*1000).toLocaleString('tr-TR');
-    lg('"' + dosyaAdi + '" kaydediliyor...');
-
-    var payload = {
-      dosyaAdi: dosyaAdi,
-      urunAdi: g.urunAdi,
-      gtip: {
-        hs12: g.hs12,
-        hs6: g.hs6 || g.hs12.substring(0,6),
-        hs2: g.hs2 || g.hs12.substring(0,2),
-        aciklama: g.aciklama
-      },
-      toplam: toplamStr,
-      ulkeler: t.ulkeler.slice(0,10).map(function(u){
-        return [u.ad, (u.hacim*1000).toLocaleString('tr-TR') + ' USD', '%' + u.yuzde];
-      }),
-      sektorler: ic.sektorler.slice(0,8).map(function(s){return [s.ad, s.neden];}),
-      firmalar: ic.firmalar.slice(0,10).map(function(f){return [f.ad, f.ulke, f.website];})
-    };
-
-    var rs = await postApps(payload);
-    ss(4);
-    lg('✅ Kaydedildi: ' + dosyaAdi, 'ok');
-
-    // Sonuç göster
-    var tablo = t.ulkeler.slice(0,10).map(function(u,i){
-      return '<tr><td>' + (i+1) + '</td><td>' + u.ad + '</td><td>%' + u.yuzde + '</td></tr>';
-    }).join('');
-
-    document.getElementById('res').innerHTML =
-      '<div class="res-card">' +
-      '<h2>🎉 Rapor Hazır!</h2>' +
-      '<div class="res-links">' +
-      (rs.url ? '<a class="link-doc" href="' + rs.url + '" target="_blank">📄 Belgeyi Aç</a>' : '') +
-      '<a class="link-folder" href="' + FOLDER_URL + '" target="_blank">📁 Klasörü Aç</a>' +
-      '</div>' +
-      '<div class="stats">' +
-      '<div class="stat"><div class="stat-val">' + g.hs12 + '</div><div class="stat-lbl">12 Haneli GTİP</div></div>' +
-      '<div class="stat"><div class="stat-val">$' + toplamStr + '</div><div class="stat-lbl">Toplam İhracat</div></div>' +
-      '<div class="stat"><div class="stat-val">' + dosyaAdi + '</div><div class="stat-lbl">Dosya Adı</div></div>' +
-      '</div>' +
-      '<h3 style="margin-bottom:8px">📊 İlk 10 İhracat Pazarı</h3>' +
-      '<table><tr><th>#</th><th>Ülke</th><th>Pay</th></tr>' + tablo + '</table>' +
-      '</div>';
-
-  } catch(e) {
-    lg('❌ ' + e.message, 'er');
-    ss(-1);
-    console.error(e);
+  function setTab(m) {
+     mode = m;
+     ['u','g','w'].forEach(function(x){document.getElementById('t-'+x).className='tab'+(x===m?' on':'');});
+     var ph={u:'dökme demir tava, çelik boru...', g:'480255901000 (12 haneli GTİP)', w:'www.firmam.com...'};
+     document.getElementById('inp').placeholder=ph[m];
   }
 
-  running = false;
-  btn.disabled = false;
-  btn.textContent = '🚀 Raporu Otomatik Hazırla';
-}
-</script>
-</body>
-</html>
+  function ss(n) {
+     for(var i=0;i<5;i++){var e=document.getElementById('s'+i);e.className='step'+(i<n?' done':i===n?' on':'');}
+  }
+
+  function lg(msg,type) {
+     var d=document.createElement('div');d.className='log-'+(type||'inf');d.textContent=msg;
+     var ll=document.getElementById('ll');ll.appendChild(d);ll.scrollTop=ll.scrollHeight;
+  }
+
+  async function ai(system,user) {
+     var r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:system,user:user})});
+     var d=await r.json();if(d.error)throw new Error(d.error);return d.text||'';
+  }
+
+  async function postApps(payload) {
+     for(var i=0;i<3;i++){
+          try{
+                 var r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'apps_script',payload:payload})});
+                 var rs=await r.json();
+                 if(rs.durum==='ok')return rs;
+                 if(i<2){lg('Yeniden deneniyor... ('+(i+1)+')');await new Promise(function(res){setTimeout(res,(i+1)*5000);});continue;}
+                 throw new Error(rs.mesaj||JSON.stringify(rs));
+          }catch(e){if(i===2)throw e;await new Promise(function(res){setTimeout(res,3000);});}
+     }
+     throw new Error('Apps Script baglanamiadi');
+  }
+
+  function pj(s) {
+     try{var c=s.replace(/```json/g,'').replace(/```/g,'').trim();return JSON.parse(c);}
+     catch(e){console.error('JSON hatasi:',e.message);throw new Error('AI gecersiz JSON: '+s.substring(0,100));}
+  }
+
+  function temizAd(s) {
+     var tr={'ş':'S','Ş':'S','ı':'I','İ':'I','ğ':'G','Ğ':'G','ü':'U','Ü':'U','ö':'O','Ö':'O','ç':'C','Ç':'C'};
+     return s.replace(/[şŞıİğĞüÜöÖçÇ]/g,function(c){return tr[c]||c;}).toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/ +/g,' ').trim();
+  }
+
+  async function run() {
+     if(running)return;
+     var inp=document.getElementById('inp').value.trim();
+     var firma=document.getElementById('firma').value.trim();
+     if(!inp){alert('Lütfen ürün adı / GTİP / website giriniz!');return;}
+     if(!firma){alert('Lütfen müşteri / firma adı giriniz!');return;}
+     running=true;
+     var btn=document.getElementById('btn');btn.disabled=true;btn.textContent='⏳ İşleniyor...';
+     document.getElementById('ll').innerHTML='';document.getElementById('lb').style.display='block';document.getElementById('res').innerHTML='';ss(0);
+     try{
+          lg('GTİP belirleniyor...');
+          var gSys='Sen bir GTIP/HS kodu uzmanisın. Girilen veriden 12 haneli Türkiye GTIP kodunu belirle.\nhs12: tam 12 haneli, hs6: ilk 6 hane, hs2: ilk 2 hane, aciklama: İngilizce max 60 karakter, urunAdi: Türkçe max 20 karakter büyük harf.\nSADECE JSON don: {"hs12":"...","hs6":"...","hs2":"...","aciklama":"...","urunAdi":"..."}';
+          var g=pj(await ai(gSys,'Girdi (mod:'+mode+'): '+inp));
+          if(!g.hs12||g.hs12.length<6)throw new Error('Geçersiz GTİP: '+JSON.stringify(g));
+          if(g.hs12.length<12)g.hs12=g.hs12.replace(/\D/g,'').padEnd(12,'0');
+          lg('✅ GTİP: '+g.hs12+' - '+g.aciklama,'ok');
+
+          ss(1);lg('Pazar verisi analiz ediliyor...');
+          var pSys='Sen bir ihracat analisti. Verilen GTIP için pazar analizini yap.\nSADECE JSON dön: {"worldTotal":123456,"ulkeler":[{"sira":1,"ad":"Ülke","hacim":12345,"yuzde":10.5}]}\nworldTotal: Türkiye toplam yıllık ihracatı USD binler cinsinden.';
+          var t=pj(await ai(pSys,'GTIP: '+g.hs12+' Ürün: '+g.urunAdi));
+          if(!t.ulkeler||t.ulkeler.length<3)throw new Error('Pazar verisi eksik');
+          lg('✅ '+t.ulkeler.length+' ülke, Toplam: $'+((t.worldTotal||0)*1000).toLocaleString('tr-TR')+' USD','ok');
+
+          ss(2);lg('Sektörler ve firmalar üretiliyor...');
+          var iSys='Sen FIX Consulting ihracat danışmanısın. Verilen ürün için potansiyel alıcı firmalar ve sektörler belirle.\nSADECE JSON dön: {"sektorler":[{"ad":"Sektör","neden":"Kısa neden"}],"firmalar":[{"ad":"Firma","ulke":"Ülke","website":"www.ornek.com"}]}';
+          var ic=pj(await ai(iSys,'Ürün: '+g.urunAdi+' GTIP: '+g.hs12+' Hedef: '+t.ulkeler.slice(0,5).map(function(u){return u.ad;}).join(', ')));
+          if(!ic.sektorler||!ic.firmalar||ic.firmalar.length<3)throw new Error('Sektör/firma verisi eksik');
+          lg('✅ '+ic.sektorler.length+' sektör + '+ic.firmalar.length+' firma','ok');
+
+          ss(3);
+          var firmaTemiz=temizAd(firma);
+          var dosyaAdi=firmaTemiz+' - ON CALISMA';
+          var toplamStr=((t.worldTotal||0)*1000).toLocaleString('tr-TR');
+          lg('"'+dosyaAdi+'" kaydediliyor...');
+
+          var payload={
+                 dosyaAdi:dosyaAdi,urunAdi:g.urunAdi,
+                 gtip:{hs12:g.hs12,hs6:g.hs6||g.hs12.substring(0,6),hs2:g.hs2||g.hs12.substring(0,2),aciklama:g.aciklama},
+                 toplam:toplamStr,
+                 ulkeler:t.ulkeler.slice(0,10).map(function(u){return[u.ad,(u.hacim*1000).toLocaleString('tr-TR')+' USD','%'+u.yuzde];}),
+                 sektorler:ic.sektorler.slice(0,8).map(function(s){return[s.ad,s.neden];}),
+                 firmalar:ic.firmalar.slice(0,10).map(function(f){return[f.ad,f.ulke,f.website];})
+          };
+
+          var rs=await postApps(payload);
+          ss(4);lg('✅ Kaydedildi: '+dosyaAdi,'ok');
+
+          var tablo=t.ulkeler.slice(0,10).map(function(u,i){return'<tr><td>'+(i+1)+'</td><td>'+u.ad+'</td><td>%'+u.yuzde+'</td></tr>';}).join('');
+          document.getElementById('res').innerHTML=
+                 '<div class="res-card"><h2>🎉 Rapor Hazır!</h2>'+
+                 '<div class="res-links">'+
+                 (rs.url?'<a class="link-doc" href="'+rs.url+'" target="_blank">📄 Belgeyi Aç</a>':'')+
+                 '<a class="link-folder" href="'+FOLDER_URL+'" target="_blank">📁 Klasörü Aç</a></div>'+
+                 '<div class="stats">'+
+                 '<div class="stat"><div class="stat-val">'+g.hs12+'</div><div class="stat-lbl">12 Haneli GTİP</div></div>'+
+                 '<div class="stat"><div class="stat-val">$'+toplamStr+'</div><div class="stat-lbl">Toplam İhracat</div></div>'+
+                 '<div class="stat"><div class="stat-val">'+dosyaAdi+'</div><div class="stat-lbl">Dosya Adı</div></div></div>'+
+                 '<h3 style="margin-bottom:8px">📊 İlk 10 İhracat Pazarı</h3>'+
+                 '<table><tr><th>#</th><th>Ülke</th><th>Pay</th></tr>'+tablo+'</table></div>';
+     }catch(e){lg('❌ '+e.message,'er');ss(-1);console.error(e);}
+     running=false;btn.disabled=false;btn.textContent='🚀 Raporu Otomatik Hazırla';
+  }
+ </script>
+ </body>
+</html>html>
+ </script></strong></label></p></h1>
+ </body>
+ </style></title>
+ </head>
