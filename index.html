@@ -84,9 +84,10 @@ var mode='u',running=false;
 function setTab(m){mode=m;['u','g','w'].forEach(function(x){document.getElementById('t-'+x).className='tab'+(x===m?' on':'');});var ph={u:'dökme demir tava, çelik boru...',g:'480255901000 (12 haneli GTİP)',w:'www.firmam.com...'};document.getElementById('inp').placeholder=ph[m];}
 function ss(n){for(var i=0;i<5;i++){var e=document.getElementById('s'+i);e.className='step'+(i<n?' done':i===n?' on':'');}}
 function lg(msg,type){var d=document.createElement('div');d.className='log-'+(type||'inf');d.textContent=msg;var ll=document.getElementById('ll');ll.appendChild(d);ll.scrollTop=ll.scrollHeight;}
-async function ai(system,user){var r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:system,user:user})});var d=await r.json();if(d.error)throw new Error(d.error);return d.text||'';}
-async function postApps(payload){for(var i=0;i<3;i++){try{var r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'apps_script',payload:payload})});var rs=await r.json();if(rs.durum==='ok')return rs;if(i<2){lg('Yeniden deneniyor... ('+(i+1)+')');await new Promise(function(res){setTimeout(res,(i+1)*5000);});continue;}throw new Error(rs.mesaj||JSON.stringify(rs));}catch(e){if(i===2)throw e;await new Promise(function(res){setTimeout(res,3000);});}}throw new Error('Apps Script bağlanamadı');}
+async function ai(s,u){var r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:s,user:u})});var d=await r.json();if(d.error)throw new Error(d.error);return d.text||'';}
+async function postApps(p){for(var i=0;i<3;i++){try{var r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'apps_script',payload:p})});var rs=await r.json();if(rs.durum==='ok')return rs;if(i<2){lg('Yeniden deneniyor... ('+(i+1)+')');await new Promise(function(x){setTimeout(x,(i+1)*5000);});continue;}throw new Error(rs.mesaj||JSON.stringify(rs));}catch(e){if(i===2)throw e;await new Promise(function(x){setTimeout(x,3000);});}}throw new Error('Apps Script baglanamiadi');}
 function pj(s){try{return JSON.parse(s);}catch(e){return null;}}
+function safeArr(o){if(!o)return[];if(Array.isArray(o))return o;var k=Object.keys(o);for(var i=0;i<k.length;i++){if(Array.isArray(o[k[i]]))return o[k[i]];}return[];}
 async function run(){
   if(running)return;
   var firma=document.getElementById('firma').value.trim();
@@ -100,29 +101,33 @@ async function run(){
   ss(0);
   try{
     lg('GTİP belirleniyor...');
-    var gtipSys='Sen bir dış ticaret uzmanısın. Sadece JSON döndür, başka hiçbir şey yazma.';
-    var gtipUsr=mode==='g'?'GTİP kodu: '+inp+'\nJSON döndür: {"hs12":"'+inp+'","hs6":"'+inp.substring(0,6)+'","aciklama":"GTİP açıklaması"}':mode==='w'?'Website: '+inp+'\nAna ürününü analiz et, JSON döndür: {"hs12":"123456789012","hs6":"123456","aciklama":"ürün açıklaması"}':'Ürün: '+inp+'\nEn uygun GTİP kodunu belirle, JSON döndür: {"hs12":"123456789012","hs6":"123456","aciklama":"ürün açıklaması"}';
-    var gtipRaw=await ai(gtipSys,gtipUsr);
-    var gtipJson=pj(gtipRaw.replace(/```json|```/g,'').trim())||{hs12:'000000000000',hs6:'000000',aciklama:inp};
-    lg('✅ GTİP: '+gtipJson.hs12+' - '+gtipJson.aciklama,'ok');ss(1);
+    var gSys='Dış ticaret uzmanısın. SADECE JSON döndür.';
+    var gUsr=mode==='g'?'GTİP: '+inp+'. JSON: {"hs12":"'+inp+'","hs6":"'+inp.substring(0,6)+'","aciklama":"aciklama"}':mode==='w'?'Website: '+inp+'. JSON: {"hs12":"123456789012","hs6":"123456","aciklama":"urun"}':'Urun: '+inp+'. JSON: {"hs12":"123456789012","hs6":"123456","aciklama":"aciklama"}';
+    var gRaw=await ai(gSys,gUsr);
+    var gJson=pj(gRaw.replace(/```json|```/g,'').trim())||{hs12:'000000000000',hs6:'000000',aciklama:inp};
+    lg('✅ GTİP: '+gJson.hs12+' - '+gJson.aciklama,'ok');ss(1);
     lg('Pazar verisi analiz ediliyor...');
-    var pazarSys='Sen bir ihracat analisti uzmanısın. Sadece JSON döndür.';
-    var pazarUsr='GTİP '+gtipJson.hs6+' ('+gtipJson.aciklama+') için Türkiye ihracat verilerini analiz et. JSON döndür: {"toplam":"$X.XXX.XXX.XXX USD","ulkeler":[["Ülke","$XXX.XXX.XXX","XX%"],...]} En az 10 ülke listele.';
-    var pazarRaw=await ai(pazarSys,pazarUsr);
-    var pazarJson=pj(pazarRaw.replace(/```json|```/g,'').trim())||{toplam:'Bilinmiyor',ulkeler:[]};
-    lg('✅ '+pazarJson.ulkeler.length+' ülke, Toplam: '+pazarJson.toplam,'ok');ss(2);
-    lg('Sektörler ve firmalar üretiliyor...');
-    var icSys='Sen bir ihracat danışmanısın. Sadece JSON döndür.';
-    var icUsr='GTİP '+gtipJson.hs6+' ('+gtipJson.aciklama+') için: 1. Bu ürünü ithal eden 5 sektör listele 2. 8 potansiyel alıcı firma listele. JSON döndür: {"sektorler":[["Sektör","Açıklama","Hacim"],...],"firmalar":[["Firma","Ülke","Sektör","Website","İletişim"],...]}';
-    var icRaw=await ai(icSys,icUsr);
-    var icJson=pj(icRaw.replace(/```json|```/g,'').trim())||{sektorler:[],firmalar:[]};
-    lg('✅ '+icJson.sektorler.length+' sektör + '+icJson.firmalar.length+' firma','ok');ss(3);
+    var pSys='İhracat analisti uzmanısın. SADECE JSON döndür.';
+    var pUsr='GTİP '+gJson.hs6+' icin Turkiye ihracat verisi. JSON: {"toplam":"$X.XXX.XXX USD","ulkeler":[["Ulke","$XXX","XX%"],...]} 10 ulke listele.';
+    var pRaw=await ai(pSys,pUsr);
+    var pObj=pj(pRaw.replace(/```json|```/g,'').trim())||{};
+    var pUlk=Array.isArray(pObj.ulkeler)?pObj.ulkeler:Array.isArray(pObj.countries)?pObj.countries:safeArr(pObj);
+    var pTop=pObj.toplam||pObj.total||'Bilinmiyor';
+    lg('✅ '+pUlk.length+' ulke, Toplam: '+pTop,'ok');ss(2);
+    lg('Sektorler ve firmalar uretiliyor...');
+    var iSys='İhracat danışmanısın. SADECE JSON döndür.';
+    var iUsr='GTİP '+gJson.hs6+' icin. JSON: {"sektorler":[["Sektor","Aciklama","Hacim"]],"firmalar":[["Firma","Ulke","Sektor","Website","Iletisim"]]} 5 sektor 8 firma.';
+    var iRaw=await ai(iSys,iUsr);
+    var iObj=pj(iRaw.replace(/```json|```/g,'').trim())||{};
+    var iSek=Array.isArray(iObj.sektorler)?iObj.sektorler:[];
+    var iFir=Array.isArray(iObj.firmalar)?iObj.firmalar:[];
+    lg('✅ '+iSek.length+' sektor + '+iFir.length+' firma','ok');ss(3);
     var dosyaAdi=firma.toUpperCase()+' - ON CALISMA';
     lg('"'+dosyaAdi+'" kaydediliyor...');
-    var sonuc=await postApps({dosyaAdi:dosyaAdi,urunAdi:inp,gtip:gtipJson,toplam:pazarJson.toplam,ulkeler:pazarJson.ulkeler,sektorler:icJson.sektorler,firmalar:icJson.firmalar});
-    ss(4);lg('✅ Drive\'a kaydedildi!','ok');
+    var sonuc=await postApps({dosyaAdi:dosyaAdi,urunAdi:inp,gtip:gJson,toplam:pTop,ulkeler:pUlk,sektorler:iSek,firmalar:iFir});
+    ss(4);lg('✅ Drive kaydedildi!','ok');
     var docUrl=sonuc.url||'';
-    document.getElementById('res').innerHTML='<div class="res-card"><h2>✅ Rapor Hazır!</h2><div class="res-links">'+(docUrl?'<a class="link-doc" href="'+docUrl+'" target="_blank">📄 Belgeyi Aç</a>':'')+'<a class="link-folder" href="'+FOLDER_URL+'" target="_blank">📁 Klasörü Aç</a></div><div class="stats"><div class="stat"><div class="stat-val">'+gtipJson.hs12+'</div><div class="stat-lbl">GTİP Kodu</div></div><div class="stat"><div class="stat-val">'+pazarJson.ulkeler.length+'</div><div class="stat-lbl">Hedef Ülke</div></div><div class="stat"><div class="stat-val">'+pazarJson.toplam+'</div><div class="stat-lbl">Toplam İhracat</div></div><div class="stat"><div class="stat-val">'+icJson.firmalar.length+'</div><div class="stat-lbl">Potansiyel Alıcı</div></div></div>'+(pazarJson.ulkeler.length>0?'<h3 style="font-size:.85rem;color:#374151;margin-bottom:8px">🌍 En Büyük Pazarlar</h3><table><tr><th>#</th><th>Ülke</th><th>İhracat</th><th>Pay</th></tr>'+pazarJson.ulkeler.slice(0,5).map(function(u,i){return '<tr><td>'+(i+1)+'</td><td>'+u[0]+'</td><td>'+u[1]+'</td><td>'+u[2]+'</td></tr>';}).join('')+'</table>':'')+'</div>';
+    document.getElementById('res').innerHTML='<div class="res-card"><h2>✅ Rapor Hazır!</h2><div class="res-links">'+(docUrl?'<a class="link-doc" href="'+docUrl+'" target="_blank">📄 Belgeyi Aç</a>':'')+'<a class="link-folder" href="'+FOLDER_URL+'" target="_blank">📁 Klasörü Aç</a></div><div class="stats"><div class="stat"><div class="stat-val">'+gJson.hs12+'</div><div class="stat-lbl">GTİP</div></div><div class="stat"><div class="stat-val">'+pUlk.length+'</div><div class="stat-lbl">Hedef Ülke</div></div><div class="stat"><div class="stat-val">'+pTop+'</div><div class="stat-lbl">İhracat</div></div><div class="stat"><div class="stat-val">'+iFir.length+'</div><div class="stat-lbl">Alıcı Firma</div></div></div>'+(pUlk.length>0?'<h3 style="font-size:.85rem;color:#374151;margin:12px 0 8px">🌍 En Büyük Pazarlar</h3><table><tr><th>#</th><th>Ülke</th><th>İhracat</th><th>Pay</th></tr>'+pUlk.slice(0,5).map(function(u,i){return'<tr><td>'+(i+1)+'</td><td>'+(u[0]||'')+'</td><td>'+(u[1]||'')+'</td><td>'+(u[2]||'')+'</td></tr>';}).join('')+'</table>':'')+'</div>';
   }catch(err){lg('❌ '+err.message,'er');}
   finally{running=false;document.getElementById('btn').disabled=false;}
 }
