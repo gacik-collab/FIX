@@ -117,9 +117,9 @@ async function run(){
     var tRaw=await ai(tSys,tUsr,false);
     var tObj=pj(tRaw)||{};
     var pUlk=[];
-    if(Array.isArray(tObj.ulkeler)){pUlk=tObj.ulkeler.filter(function(u){return Array.isArray(u)&&u.length>=2;});}
+    var _ul=tObj.ulkeler||tObj.countries||tObj.exporters||[];if(!Array.isArray(_ul)){var _uk=Object.values(_ul);_ul=_uk.map(function(v){return Array.isArray(v)?v:[String(v),"",""];});}pUlk=_ul.filter(function(u){return Array.isArray(u)&&u.length>=1;});pUlk=pUlk.map(function(u){return[String(u[0]||""),String(u[1]||""),String(u[2]||"")];});
     else{pUlk=(safeArr(tObj,"ulkeler")||safeArr(tObj,"countries")||[]).filter(function(u){return Array.isArray(u)&&u.length>=2;});}
-    var pTop=tObj.toplam||tObj.total||"Veri alinamadi";
+    var _t=tObj.toplam||tObj.total||"";var pTop=typeof _t==="string"?(_t||"Veri alinamadi"):JSON.stringify(_t);
     lg(pUlk.length+" ulke verisi alindi, Toplam: "+pTop,"ok");ss(2);
 
     lg("Hedeflenebilecek sektorler analiz ediliyor...");
