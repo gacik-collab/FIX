@@ -175,66 +175,75 @@ async function run() {
   document.getElementById("ll").innerHTML = "";
   document.getElementById("res").innerHTML = "";
   ss(0);
+
   try {
+    // ADIM 1: GTIP
     lg("GTIP belirleniyor...");
-    var gSys = "Sen bir dis ticaret uzmanisisin ve SADECE gecerli JSON dondurursun.";
+    var gSys = "Sen Turkiye Gumruk Tarife Istatistik Pozisyonu (GTIP) konusunda uzman bir dis ticaret danismanisin. Verilen urune en uygun 12 haneli GTIP kodunu bul. YALNIZCA asagidaki JSON formatinda yanit ver, baska hicbir sey yazma:\n{\"hs12\":\"XXXXXXXXXXXX\",\"hs6\":\"XXXXXX\",\"hs4\":\"XXXX\",\"aciklama\":\"urun aciklamasi\",\"kategori\":\"sektor adi\"}";
     var gUsr;
     if (mode === "g") {
-      gUsr = "GTIP kodu verildi: " + inp + ". Bu GTIP icin JSON dondur. Format hs12 hs6 hs4 aciklama kategori alanlari olan nesne.";
+      gUsr = "Verilen GTIP kodu: " + inp + "\nBu kod icin hs12, hs6, hs4, aciklama ve kategori bilgilerini JSON olarak don.";
     } else if (mode === "w") {
-      gUsr = "Bu firmay\u0131 analiz et: " + inp + ". Ana urunun GTIP kodunu ver. Format hs12 hs6 hs4 aciklama kategori alanlari olan nesne.";
+      gUsr = "Web sitesi: " + inp + "\nBu firmanin ana urununu belirle ve o urunun 12 haneli GTIP kodunu JSON olarak don.";
     } else {
-      gUsr = "Urun: " + inp + ". En uygun 12 haneli GTIP kodu ver. Format hs12 hs6 hs4 aciklama kategori alanlari olan nesne.";
+      gUsr = "Urun adi: " + inp + "\nBu urunun Turkiye Gumruk Tarife sistemindeki 12 haneli GTIP kodunu bul ve JSON olarak don. hs12 tam 12 rakam olmali.";
     }
     var gRaw = await ai(gSys, gUsr, true);
-    var gJson = pj(gRaw) || {hs12:"000000000000", hs6:"000000", hs4:"0000", aciklama:inp, kategori:inp};
-    if (!gJson.hs6 || gJson.hs6.length < 6) gJson.hs6 = gJson.hs12.substring(0,6);
+    var gJson = pj(gRaw);
+    if (!gJson || !gJson.hs12) {
+      throw new Error("GTIP bulunamadi. Ham yanit: " + gRaw.substring(0, 100));
+    }
+    if (gJson.hs12.length < 6) {
+      throw new Error("GTIP kodu cok kisa: " + gJson.hs12);
+    }
+    if (!gJson.hs6 || gJson.hs6.length < 6) {
+      gJson.hs6 = gJson.hs12.substring(0, 6);
+    }
     lg("GTIP: " + gJson.hs12 + " - " + gJson.aciklama, "ok");
     ss(1);
 
-    lg("2024 Trademap ihracat verisi sorgulan\u0131yor...");
-    var tSys = "Sen Turkiye dis ticaret istatistikleri konusunda uzman bir analistsin. SADECE gecerli JSON dondur.";
-    var tUsr = "Turkiye nin HS kodu " + gJson.hs6 + " olan urun grubundaki " + gJson.aciklama + " icin 2024 yili ihracat rakamlarini ver. En buyuk 10 alici ulkeyi listele. Rakamlar USD. Trademap veya TUIK verilerinden al. Cikti: toplam alani ve ulkeler alani olan JSON. ulkeler her biri 3 elemanli Array olan Array. Elemanlar: ulke_adi dolar_miktari yuzde_pay.";
+    // ADIM 2: Trademap verisi
+    lg("2024 ihracat verisi sorgulanıyor...");
+    var tSys = "Sen Turkiye dis ticaret istatistikleri konusunda uzman bir analistsin. Trademap ve TUIK verilerine hakimsin. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"toplam\":\"USD deger\",\"ulkeler\":[[\"ulke adi\",\"USD miktar\",\"% pay\"],[\"ulke adi\",\"USD miktar\",\"% pay\"]]}";
+    var tUsr = "Turkiye'nin HS6 kodu " + gJson.hs6 + " olan '" + gJson.aciklama + "' urunu icin 2024 yili ihracat verilerini ver.\n- En buyuk 10 alici ulkeyi listele\n- Rakamlar USD cinsinden olmali\n- Gercek veya tahmini degerler kabul edilir\n- toplam alani toplam ihracat degerini gostersin";
     var tRaw = await ai(tSys, tUsr, false);
     var tObj = pj(tRaw) || {};
-    var pUlk = [];
-    var _ul = tObj.ulkeler || tObj.countries || tObj.exporters || [];
-    if (!Array.isArray(_ul)) {
-      var _uk = Object.values(_ul);
-      _ul = _uk.map(function(v) { return Array.isArray(v) ? v : [String(v),"",""]; });
-    }
-    pUlk = _ul.filter(function(u) { return Array.isArray(u) && u.length >= 1; });
+    var pUlk = safeArr(tObj, "ulkeler");
+    pUlk = pUlk.filter(function(u) { return Array.isArray(u) && u.length >= 1; });
     pUlk = pUlk.map(function(u) { return [String(u[0]||""), String(u[1]||""), String(u[2]||"")]; });
-    var _t = tObj.toplam || tObj.total || "";
-    var pTop = typeof _t === "string" ? _t : JSON.stringify(_t);
+    var pTop = String(tObj.toplam || tObj.total || "");
     lg(pUlk.length + " ulke verisi alindi, Toplam: " + pTop, "ok");
     ss(2);
 
-    lg("Hedeflenebilecek sektorler analiz ediliyor...");
-    var sSys = "ihracat dis ticaret ve B2B hedef musteri belirleme konusunda uzman bir danismansin. SADECE gecerli JSON dondur.";
-    var sUsr = "Urun: " + gJson.aciklama + " GTIP: " + gJson.hs12 + ". IHRACATTA HEDEFLENEBİLECEK SEKTORLER tablosunu olustur. Kurallar: Yalnizca 2 kolon sektor ve aciklama. Maksimum 8 satir. Her satir somut bir sektoru temsil etmeli. Cikti: sektorler alani olan JSON. sektorler her biri 2 elemanli Array olan Array.";
+    // ADIM 3: Sektorler
+    lg("Hedef sektorler belirleniyor...");
+    var sSys = "Sen ihracat ve B2B pazar gelistirme konusunda uzman bir danismanisın. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"sektorler\":[[\"sektor adi\",\"neden hedef olabilir\"],[\"sektor adi\",\"neden hedef olabilir\"]]}";
+    var sUsr = "Urun: " + gJson.aciklama + " (GTIP: " + gJson.hs12 + ")\nBu urunu ithal edebilecek veya kullanabilecek en onemli 6-8 sektoru listele. Her sektor icin kisa bir aciklama yaz.";
     var sRaw = await ai(sSys, sUsr, true);
     var sObj = pj(sRaw) || {};
-    var sektorler = Array.isArray(sObj.sektorler) ? sObj.sektorler : [];
-    lg(sektorler.length + " sektor belirlendi", "ok");
+    var sektorler = safeArr(sObj, "sektorler");
+    lg(sektorler.length + " hedef sektor belirlendi", "ok");
     ss(3);
 
+    // ADIM 4: Potansiyel musteriler
     lg("Potansiyel musteriler arastiriliyor...");
-    var mSys = "Sen ihracat danismani ve B2B ticaret arastirmacisin. Gercek firmalari listelemalisin. SADECE gecerli JSON dondur.";
-    var mUsr = "Urun: " + gJson.aciklama + " GTIP: " + gJson.hs12 + ". Bu urunu ithal edebilecek veya kullanan GERCEK sirketlerin listesini ver. Maksimum 10 firma. Cikti: firmalar alani olan JSON. firmalar her biri 3 elemanli Array olan Array. Elemanlar: firma_adi ulke sektor.";
+    var mSys = "Sen uluslararasi B2B ticaret ve ihracat gelistirme konusunda uzman bir danismanisın. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"firmalar\":[[\"firma adi\",\"ulke\",\"sektor\"],[\"firma adi\",\"ulke\",\"sektor\"]]}";
+    var mUsr = "Urun: " + gJson.aciklama + " (GTIP: " + gJson.hs12 + ")\nBu urunu ithal edebilecek veya kullanan GERCEK uluslararasi firmalari listele. En az 8, en fazla 12 firma. Farkli ulkelerden farkli sektorlerden firmalar sec.";
     var mRaw = await ai(mSys, mUsr, false);
     var mObj = pj(mRaw) || {};
     var fArr = safeArr(mObj, "firmalar");
+    fArr = fArr.filter(function(f) { return Array.isArray(f) && f.length >= 1; });
     lg(fArr.length + " potansiyel firma bulundu", "ok");
     ss(4);
 
+    // ADIM 5: Drive'a kaydet
     lg("Drive a kaydediliyor...");
     var sonuc = await postApps({
       firma: firma,
       urun: gJson.aciklama,
       hs12: gJson.hs12,
       hs6: gJson.hs6,
-      kategori: gJson.kategori,
+      kategori: gJson.kategori || "",
       toplam: pTop,
       ulkeler: pUlk,
       sektorler: sektorler,
@@ -243,6 +252,7 @@ async function run() {
     ss(5);
     lg("Drive a kaydedildi!", "ok");
 
+    // Sonuc goster
     var docUrl = sonuc.url || "";
     var h = "<div class='res-card'><h2>Rapor Hazir!</h2>";
     h += "<div class='res-links'>";
@@ -255,7 +265,7 @@ async function run() {
     h += "<div class='stat'><div class='stat-val'>" + fArr.length + "</div><div class='stat-lbl'>Potansiyel Firma</div></div>";
     h += "</div>";
     if (pUlk.length > 0) {
-      h += "<h3 style='font-size:.85rem;color:#374151;margin:16px 0 8px'>En Buyuk Pazarlar (Trademap 2024)</h3>";
+      h += "<h3 style='font-size:.85rem;color:#374151;margin:16px 0 8px'>En Buyuk Pazarlar (2024)</h3>";
       h += "<table><tr><th>#</th><th>Ulke</th><th>Ihracat USD</th><th>Pay</th></tr>";
       pUlk.slice(0,10).forEach(function(u,i) {
         h += "<tr><td>"+(i+1)+"</td><td>"+u[0]+"</td><td>"+u[1]+"</td><td>"+u[2]+"</td></tr>";
@@ -264,6 +274,7 @@ async function run() {
     }
     h += "</div>";
     document.getElementById("res").innerHTML = h;
+
   } catch(err) {
     lg("HATA: " + err.message, "er");
   } finally {
