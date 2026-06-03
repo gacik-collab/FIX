@@ -26,6 +26,14 @@ input[type=text]:focus{border-color:#2563eb}
 .sep{height:1px;background:#f3f4f6;margin:24px 0}
 button#btn{width:100%;padding:16px;background:linear-gradient(135deg,#1a3a8f,#2563eb);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:24px}
 button#btn:disabled{opacity:.6;cursor:not-allowed}
+#tm-box{display:none;margin-top:20px;background:#fffbeb;border:1.5px solid #f59e0b;border-radius:12px;padding:20px}
+#tm-box h3{font-size:.9rem;font-weight:700;color:#92400e;margin-bottom:8px}
+#tm-box p{font-size:.82rem;color:#78350f;margin-bottom:12px}
+.tm-btn{display:inline-block;padding:10px 20px;background:#f59e0b;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:.85rem;margin-bottom:12px}
+.upload-area{border:2px dashed #f59e0b;border-radius:8px;padding:16px;text-align:center;cursor:pointer;background:#fff}
+.upload-area:hover{background:#fffbeb}
+.upload-area p{font-size:.82rem;color:#92400e;margin:0}
+#excel-input{display:none}
 #lb{display:none;margin-top:24px;background:#f8faff;border:1px solid #dbeafe;border-radius:12px;padding:16px}
 #lb h3{font-size:.85rem;color:#1e40af;margin-bottom:10px}
 #ll{max-height:200px;overflow-y:auto;font-size:.8rem;font-family:monospace}
@@ -74,12 +82,31 @@ tr:hover td{background:#f8faff}
     <input type="text" id="inp" placeholder="dokme demir tava, celik boru...">
     <button id="btn" onclick="run()">Raporu Otomatik Hazirla</button>
   </div>
+
+  <div id="tm-box">
+    <h3>📊 Trademap'ten Veri Yukle</h3>
+    <p>GTIP kodu bulundu. Simdi Trademap'ten gercek ihracat verisini indirin:</p>
+    <a id="tm-link" href="#" target="_blank" class="tm-btn">🔗 Trademap'i Ac (Excel Indir)</a>
+    <p style="font-size:.78rem;color:#92400e;margin-bottom:10px">Acilan sayfada: <strong>Download → Excel</strong> tiklayin, dosyayi kaydedin, asagiya yukleyin.</p>
+    <div class="upload-area" onclick="document.getElementById('excel-input').click()">
+      <p>📁 Excel dosyasini buraya tiklayarak yukleyin (.xls veya .xlsx)</p>
+      <p id="file-name" style="margin-top:6px;font-weight:700;color:#2563eb"></p>
+    </div>
+    <input type="file" id="excel-input" accept=".xls,.xlsx" onchange="excelYukle(this)">
+    <button onclick="devamEt()" id="devam-btn" style="width:100%;margin-top:12px;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;display:none">✅ Devam Et - Raporu Olustur</button>
+  </div>
+
   <div id="lb"><h3>Islem Durumu</h3><div id="ll"></div></div>
   <div id="res"></div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 var FOLDER_URL = "https://drive.google.com/drive/folders/1WaBrSm7Ey3WUq3K3foRITFiuKdzltwer";
 var mode = "u", running = false;
+var gGtip = null;
+var tmUlkeler = [];
+var tmToplam = "";
 
 function setTab(m) {
   mode = m;
@@ -111,9 +138,7 @@ function pj(s) {
     s = s.replace(/```json|```/g, "").trim();
     var m = s.match(/\{[\s\S]*\}/);
     return m ? JSON.parse(m[0]) : null;
-  } catch(e) {
-    return null;
-  }
+  } catch(e) { return null; }
 }
 
 function safeArr(o, k) {
@@ -126,10 +151,9 @@ function safeArr(o, k) {
   return [];
 }
 
-async function ai(s, u, haiku, search) {
+async function ai(s, u, haiku) {
   var body = {system: s, user: u};
   if (haiku) body.useHaiku = true;
-  if (search) body.useSearch = true;
   var r = await fetch("/api/ai", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
@@ -164,12 +188,47 @@ async function postApps(p) {
   throw new Error("baglanti hatasi");
 }
 
+function excelYukle(input) {
+  var file = input.files[0];
+  if (!file) return;
+  document.getElementById("file-name").textContent = file.name;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, {type: "array"});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var data = XLSX.utils.sheet_to_json(ws, {header: 1});
+      tmUlkeler = [];
+      tmToplam = "";
+      for (var i = 0; i < data.length; i++) {
+        var row = data[i];
+        if (!row || !row[0]) continue;
+        var col0 = String(row[0] || "").trim();
+        var col1 = String(row[1] || "").trim();
+        var col2 = String(row[2] || "").trim();
+        if (col0 === "World" || col0 === "Dunya" || col0 === "Dünya") {
+          tmToplam = col1 + " USD thousand";
+        } else if (col0 && col1 && col0 !== "Importers" && col0 !== "Ithalatcilar" && !col0.includes("Value")) {
+          tmUlkeler.push([col0, col1 + " USD thousand", col2 + "%"]);
+        }
+      }
+      tmUlkeler = tmUlkeler.slice(0, 10);
+      lg("Excel okundu: " + tmUlkeler.length + " ulke bulundu", "ok");
+      document.getElementById("devam-btn").style.display = "block";
+    } catch(err) {
+      lg("Excel okuma hatasi: " + err.message, "er");
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 async function run() {
   if (running) return;
   var firma = document.getElementById("firma").value.trim();
   var inp = document.getElementById("inp").value.trim();
   if (!firma) { alert("Firma adi girin!"); return; }
   if (!inp) { alert("Urun/GTIP/Website girin!"); return; }
+
   running = true;
   document.getElementById("btn").disabled = true;
   document.getElementById("lb").style.display = "block";
@@ -180,43 +239,58 @@ async function run() {
   try {
     // ADIM 1: GTIP
     lg("GTIP belirleniyor...");
-    var gSys = "Sen Turkiye Gumruk Tarife Istatistik Pozisyonu (GTIP) konusunda uzman bir dis ticaret danismanisin. Verilen urune en uygun 12 haneli GTIP kodunu bul. YALNIZCA asagidaki JSON formatinda yanit ver, baska hicbir sey yazma:\n{\"hs12\":\"XXXXXXXXXXXX\",\"hs6\":\"XXXXXX\",\"hs4\":\"XXXX\",\"aciklama\":\"urun aciklamasi\",\"kategori\":\"sektor adi\"}";
+    var gSys = "Sen Turkiye Gumruk Tarife Istatistik Pozisyonu (GTIP) konusunda uzman bir dis ticaret danismanisin. Verilen urune en uygun GTIP kodunu bul. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"hs12\":\"XXXXXXXXXXXX\",\"hs6\":\"XXXXXX\",\"hs4\":\"XXXX\",\"aciklama\":\"urun aciklamasi\",\"kategori\":\"sektor adi\"}\nhs12 tam 12 rakam olmali, gercek ve gecerli Turkiye GTIP kodu ver. Ornek: 420291000090, 720811000011";
     var gUsr;
     if (mode === "g") {
-      gUsr = "Verilen GTIP kodu: " + inp + "\nBu kod icin hs12, hs6, hs4, aciklama ve kategori bilgilerini JSON olarak don.";
+      gUsr = "Verilen GTIP kodu: " + inp + "\nBu kod icin bilgileri JSON olarak don.";
     } else if (mode === "w") {
-      gUsr = "Web sitesi: " + inp + "\nBu firmanin ana urununu belirle ve o urunun 12 haneli GTIP kodunu JSON olarak don.";
+      gUsr = "Web sitesi: " + inp + "\nBu firmanin ana urununu belirle ve GTIP kodunu JSON olarak don.";
     } else {
-      gUsr = "Urun adi: " + inp + "\nBu urunun Turkiye Gumruk Tarife Istatistik Pozisyonu kodunu bul. Turkiye GTIP sistemi 12 haneli olup son 6 hane istatistik kodudur. Ornek gecerli kodlar: 420291000090, 720811000011, 610910100010. Uydurma, sadece gercek ve gecerli Turkiye GTIP kodu ver. hs12 alani tam 12 rakamdan olusacak.";
+      gUsr = "Urun adi: " + inp + "\nBu urunun gercek 12 haneli Turkiye GTIP kodunu bul ve JSON olarak don.";
     }
     var gRaw = await ai(gSys, gUsr, true);
     var gJson = pj(gRaw);
-    if (!gJson || !gJson.hs12) {
-      throw new Error("GTIP bulunamadi. Ham yanit: " + gRaw.substring(0, 100));
-    }
-    if (!gJson.hs6 || gJson.hs6.length < 6) {
-      gJson.hs6 = gJson.hs12.substring(0, 6);
-    }
+    if (!gJson || !gJson.hs12) throw new Error("GTIP bulunamadi.");
+    if (!gJson.hs6 || gJson.hs6.length < 6) gJson.hs6 = gJson.hs12.substring(0, 6);
+
+    gGtip = gJson;
     lg("GTIP: " + gJson.hs12 + " - " + gJson.aciklama, "ok");
+
+    // Trademap linkini olustur ve kutuyu goster
+    var tmUrl = "https://www.trademap.org/Country_SelProductCountry.aspx?nvpm=1%7c792%7c%7c%7c%7c" + gJson.hs6 + "%7c%7c%7c6%7c1%7c1%7c2%7c2%7c1%7c2%7c1%7c1%7c1";
+    document.getElementById("tm-link").href = tmUrl;
+    document.getElementById("tm-box").style.display = "block";
+    running = false;
+    document.getElementById("btn").disabled = false;
     ss(1);
 
-    // ADIM 2: Trademap - web search ile gercek veri
-    lg("2025 ihracat verisi sorgulanıyor (web arama)...");
-    var tSys = "Sen Turkiye dis ticaret istatistikleri konusunda uzman bir analistsin. Web'den gercek Trademap veya TUIK verilerini ara ve bul. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"toplam\":\"USD deger\",\"ulkeler\":[[\"ulke adi\",\"USD miktar\",\"% pay\"],[\"ulke adi\",\"USD miktar\",\"% pay\"]]}";
-    var tUsr = "Trademap.org veya tuik.gov.tr sitesinden Turkiye'nin HS6 kodu " + gJson.hs6 + " olan '" + gJson.aciklama + "' urunu icin en guncel ihracat verilerini ara. En buyuk 10 alici ulkeyi ve toplam ihracat degerini bul. Gercek verileri JSON olarak don.";
-    var tRaw = await ai(tSys, tUsr, true);
-    var tObj = pj(tRaw) || {};
-    var pUlk = safeArr(tObj, "ulkeler");
-    pUlk = pUlk.filter(function(u) { return Array.isArray(u) && u.length >= 1; });
-    pUlk = pUlk.map(function(u) { return [String(u[0]||""), String(u[1]||""), String(u[2]||"")]; });
-    var pTop = String(tObj.toplam || "");
-    lg(pUlk.length + " ulke verisi alindi, Toplam: " + pTop, "ok");
+  } catch(err) {
+    lg("HATA: " + err.message, "er");
+    running = false;
+    document.getElementById("btn").disabled = false;
+  }
+}
+
+async function devamEt() {
+  if (running) return;
+  if (!gGtip) { alert("Once GTIP bulunmali!"); return; }
+
+  running = true;
+  document.getElementById("devam-btn").disabled = true;
+  document.getElementById("lb").style.display = "block";
+
+  var firma = document.getElementById("firma").value.trim();
+
+  try {
+    var pUlk = tmUlkeler;
+    var pTop = tmToplam;
+    lg(pUlk.length + " ulke verisi alindi", "ok");
     ss(2);
 
     // ADIM 3: Sektorler
     lg("Hedef sektorler belirleniyor...");
-    var sSys = "Sen ihracat ve B2B pazar gelistirme konusunda uzman bir danismanisın. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"sektorler\":[[\"sektor adi\",\"neden hedef olabilir\"],[\"sektor adi\",\"neden hedef olabilir\"]]}";
-    var sUsr = "Urun: " + gJson.aciklama + " (GTIP: " + gJson.hs12 + ")\nBu urunu ithal edebilecek veya kullanabilecek en onemli 6-8 sektoru listele.";
+    var sSys = "Sen ihracat ve B2B pazar gelistirme uzmanisın. YALNIZCA JSON formatinda yanit ver:\n{\"sektorler\":[[\"sektor adi\",\"neden hedef olabilir\"]]}";
+    var sUsr = "Urun: " + gGtip.aciklama + " (GTIP: " + gGtip.hs12 + ")\nBu urunu kullanabilecek en onemli 6-8 sektoru listele.";
     var sRaw = await ai(sSys, sUsr, true);
     var sObj = pj(sRaw) || {};
     var sektorler = safeArr(sObj, "sektorler");
@@ -225,8 +299,8 @@ async function run() {
 
     // ADIM 4: Musteriler
     lg("Potansiyel musteriler arastiriliyor...");
-    var mSys = "Sen uluslararasi B2B ticaret uzmanisın. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"firmalar\":[[\"firma adi\",\"ulke\",\"sektor\"],[\"firma adi\",\"ulke\",\"sektor\"]]}";
-    var mUsr = "Urun: " + gJson.aciklama + " (GTIP: " + gJson.hs12 + ")\nBu urunu ithal edebilecek GERCEK uluslararasi firmalari listele. 8-10 firma, farkli ulkelerden.";
+    var mSys = "Sen uluslararasi B2B ticaret uzmanisın. YALNIZCA JSON formatinda yanit ver:\n{\"firmalar\":[[\"firma adi\",\"ulke\",\"sektor\"]]}";
+    var mUsr = "Urun: " + gGtip.aciklama + " (GTIP: " + gGtip.hs12 + ")\nBu urunu ithal eden GERCEK uluslararasi 8-10 firma listele.";
     var mRaw = await ai(mSys, mUsr, false);
     var mObj = pj(mRaw) || {};
     var fArr = safeArr(mObj, "firmalar");
@@ -238,10 +312,10 @@ async function run() {
     lg("Drive a kaydediliyor...");
     var sonuc = await postApps({
       firma: firma,
-      urun: gJson.aciklama,
-      hs12: gJson.hs12,
-      hs6: gJson.hs6,
-      kategori: gJson.kategori || "",
+      urun: gGtip.aciklama,
+      hs12: gGtip.hs12,
+      hs6: gGtip.hs6,
+      kategori: gGtip.kategori || "",
       toplam: pTop,
       ulkeler: pUlk,
       sektorler: sektorler,
@@ -256,7 +330,7 @@ async function run() {
     if (docUrl) h += "<a class='link-doc' href='" + docUrl + "' target='_blank'>Belgeyi Ac</a>";
     h += "<a class='link-folder' href='" + FOLDER_URL + "' target='_blank'>Klasoru Ac</a>";
     h += "</div><div class='stats'>";
-    h += "<div class='stat'><div class='stat-val'>" + gJson.hs12 + "</div><div class='stat-lbl'>GTIP</div></div>";
+    h += "<div class='stat'><div class='stat-val'>" + gGtip.hs12 + "</div><div class='stat-lbl'>GTIP</div></div>";
     h += "<div class='stat'><div class='stat-val'>" + pUlk.length + "</div><div class='stat-lbl'>Hedef Ulke</div></div>";
     h += "<div class='stat'><div class='stat-val'>" + pTop + "</div><div class='stat-lbl'>Ihracat</div></div>";
     h += "<div class='stat'><div class='stat-val'>" + fArr.length + "</div><div class='stat-lbl'>Potansiyel Firma</div></div>";
@@ -271,15 +345,15 @@ async function run() {
     }
     h += "</div>";
     document.getElementById("res").innerHTML = h;
+    document.getElementById("tm-box").style.display = "none";
 
   } catch(err) {
     lg("HATA: " + err.message, "er");
   } finally {
     running = false;
-    document.getElementById("btn").disabled = false;
+    document.getElementById("devam-btn").disabled = false;
   }
 }
 </script>
 </body>
 </html>
-
