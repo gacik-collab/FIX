@@ -128,7 +128,8 @@ function safeArr(o, k) {
 
 async function ai(s, u, haiku, search) {
   var body = {system: s, user: u};
-  if (haiku) body.useHaiku = true;`n  if (search) body.useSearch = true;
+  if (haiku) body.useHaiku = true;
+  if (search) body.useSearch = true;
   var r = await fetch("/api/ai", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
@@ -193,42 +194,39 @@ async function run() {
     if (!gJson || !gJson.hs12) {
       throw new Error("GTIP bulunamadi. Ham yanit: " + gRaw.substring(0, 100));
     }
-    if (gJson.hs12.length < 6) {
-      throw new Error("GTIP kodu cok kisa: " + gJson.hs12);
-    }
     if (!gJson.hs6 || gJson.hs6.length < 6) {
       gJson.hs6 = gJson.hs12.substring(0, 6);
     }
     lg("GTIP: " + gJson.hs12 + " - " + gJson.aciklama, "ok");
     ss(1);
 
-    // ADIM 2: Trademap verisi
-    lg("2024 ihracat verisi sorgulanıyor...");
-    var tSys = "Sen Turkiye dis ticaret istatistikleri konusunda uzman bir analistsin. Trademap ve TUIK verilerine hakimsin. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"toplam\":\"USD deger\",\"ulkeler\":[[\"ulke adi\",\"USD miktar\",\"% pay\"],[\"ulke adi\",\"USD miktar\",\"% pay\"]]}";
-    var tUsr = "Turkiye'nin HS6 kodu " + gJson.hs6 + " olan '" + gJson.aciklama + "' urunu icin 2024 yili ihracat verilerini ver.\n- En buyuk 10 alici ulkeyi listele\n- Rakamlar USD cinsinden olmali\n- Gercek veya tahmini degerler kabul edilir\n- toplam alani toplam ihracat degerini gostersin";
+    // ADIM 2: Trademap - web search ile gercek veri
+    lg("2025 ihracat verisi sorgulanıyor (web arama)...");
+    var tSys = "Sen Turkiye dis ticaret istatistikleri konusunda uzman bir analistsin. Web'den gercek Trademap veya TUIK verilerini ara ve bul. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"toplam\":\"USD deger\",\"ulkeler\":[[\"ulke adi\",\"USD miktar\",\"% pay\"],[\"ulke adi\",\"USD miktar\",\"% pay\"]]}";
+    var tUsr = "Trademap.org veya tuik.gov.tr sitesinden Turkiye'nin HS6 kodu " + gJson.hs6 + " olan '" + gJson.aciklama + "' urunu icin en guncel ihracat verilerini ara. En buyuk 10 alici ulkeyi ve toplam ihracat degerini bul. Gercek verileri JSON olarak don.";
     var tRaw = await ai(tSys, tUsr, false, true);
     var tObj = pj(tRaw) || {};
     var pUlk = safeArr(tObj, "ulkeler");
     pUlk = pUlk.filter(function(u) { return Array.isArray(u) && u.length >= 1; });
     pUlk = pUlk.map(function(u) { return [String(u[0]||""), String(u[1]||""), String(u[2]||"")]; });
-    var pTop = String(tObj.toplam || tObj.total || "");
+    var pTop = String(tObj.toplam || "");
     lg(pUlk.length + " ulke verisi alindi, Toplam: " + pTop, "ok");
     ss(2);
 
     // ADIM 3: Sektorler
     lg("Hedef sektorler belirleniyor...");
     var sSys = "Sen ihracat ve B2B pazar gelistirme konusunda uzman bir danismanisın. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"sektorler\":[[\"sektor adi\",\"neden hedef olabilir\"],[\"sektor adi\",\"neden hedef olabilir\"]]}";
-    var sUsr = "Urun: " + gJson.aciklama + " (GTIP: " + gJson.hs12 + ")\nBu urunu ithal edebilecek veya kullanabilecek en onemli 6-8 sektoru listele. Her sektor icin kisa bir aciklama yaz.";
+    var sUsr = "Urun: " + gJson.aciklama + " (GTIP: " + gJson.hs12 + ")\nBu urunu ithal edebilecek veya kullanabilecek en onemli 6-8 sektoru listele.";
     var sRaw = await ai(sSys, sUsr, true);
     var sObj = pj(sRaw) || {};
     var sektorler = safeArr(sObj, "sektorler");
     lg(sektorler.length + " hedef sektor belirlendi", "ok");
     ss(3);
 
-    // ADIM 4: Potansiyel musteriler
+    // ADIM 4: Musteriler
     lg("Potansiyel musteriler arastiriliyor...");
-    var mSys = "Sen uluslararasi B2B ticaret ve ihracat gelistirme konusunda uzman bir danismanisın. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"firmalar\":[[\"firma adi\",\"ulke\",\"sektor\"],[\"firma adi\",\"ulke\",\"sektor\"]]}";
-    var mUsr = "Urun: " + gJson.aciklama + " (GTIP: " + gJson.hs12 + ")\nBu urunu ithal edebilecek veya kullanan GERCEK uluslararasi firmalari listele. En az 8, en fazla 12 firma. Farkli ulkelerden farkli sektorlerden firmalar sec.";
+    var mSys = "Sen uluslararasi B2B ticaret uzmanisın. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"firmalar\":[[\"firma adi\",\"ulke\",\"sektor\"],[\"firma adi\",\"ulke\",\"sektor\"]]}";
+    var mUsr = "Urun: " + gJson.aciklama + " (GTIP: " + gJson.hs12 + ")\nBu urunu ithal edebilecek GERCEK uluslararasi firmalari listele. 8-10 firma, farkli ulkelerden.";
     var mRaw = await ai(mSys, mUsr, false);
     var mObj = pj(mRaw) || {};
     var fArr = safeArr(mObj, "firmalar");
@@ -236,7 +234,7 @@ async function run() {
     lg(fArr.length + " potansiyel firma bulundu", "ok");
     ss(4);
 
-    // ADIM 5: Drive'a kaydet
+    // ADIM 5: Drive
     lg("Drive a kaydediliyor...");
     var sonuc = await postApps({
       firma: firma,
@@ -252,7 +250,6 @@ async function run() {
     ss(5);
     lg("Drive a kaydedildi!", "ok");
 
-    // Sonuc goster
     var docUrl = sonuc.url || "";
     var h = "<div class='res-card'><h2>Rapor Hazir!</h2>";
     h += "<div class='res-links'>";
@@ -265,7 +262,7 @@ async function run() {
     h += "<div class='stat'><div class='stat-val'>" + fArr.length + "</div><div class='stat-lbl'>Potansiyel Firma</div></div>";
     h += "</div>";
     if (pUlk.length > 0) {
-      h += "<h3 style='font-size:.85rem;color:#374151;margin:16px 0 8px'>En Buyuk Pazarlar (2024)</h3>";
+      h += "<h3 style='font-size:.85rem;color:#374151;margin:16px 0 8px'>En Buyuk Pazarlar</h3>";
       h += "<table><tr><th>#</th><th>Ulke</th><th>Ihracat USD</th><th>Pay</th></tr>";
       pUlk.slice(0,10).forEach(function(u,i) {
         h += "<tr><td>"+(i+1)+"</td><td>"+u[0]+"</td><td>"+u[1]+"</td><td>"+u[2]+"</td></tr>";
