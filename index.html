@@ -188,6 +188,23 @@ async function postApps(p) {
   throw new Error("baglanti hatasi");
 }
 
+function parseHtmlXls(html) {
+  // Trademap'in HTML formatindaki XLS dosyasini parse et
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, "text/html");
+  var rows = doc.querySelectorAll("tr");
+  var result = [];
+  rows.forEach(function(tr) {
+    var cells = tr.querySelectorAll("td, th");
+    if (cells.length > 0) {
+      var row = [];
+      cells.forEach(function(td) { row.push(td.textContent.trim()); });
+      result.push(row);
+    }
+  });
+  return result;
+}
+
 function excelYukle(input) {
   var file = input.files[0];
   if (!file) return;
@@ -195,25 +212,68 @@ function excelYukle(input) {
   var reader = new FileReader();
   reader.onload = function(e) {
     try {
-      var wb = XLSX.read(e.target.result, {type: "array"});
-      var ws = wb.Sheets[wb.SheetNames[0]];
-      var data = XLSX.utils.sheet_to_json(ws, {header: 1});
       tmUlkeler = [];
       tmToplam = "";
+      var data = [];
+
+      // Trademap HTML-XLS formatini dene
+      var text = new TextDecoder("utf-8").decode(new Uint8Array(e.target.result));
+      if (text.indexOf("<!DOCTYPE") >= 0 || text.indexOf("<html") >= 0) {
+        data = parseHtmlXls(text);
+      } else {
+        // Gercek Excel formatini dene
+        var wb = XLSX.read(e.target.result, {type: "array"});
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        data = XLSX.utils.sheet_to_json(ws, {header: 1});
+      }
+
+      // Header satirini bul (Importers kolonu olan satir)
+      var headerIdx = -1;
+      var lastValCol = -1;
+      var shareCol = -1;
       for (var i = 0; i < data.length; i++) {
-        var row = data[i];
-        if (!row || !row[0]) continue;
-        var col0 = String(row[0] || "").trim();
-        var col1 = String(row[1] || "").trim();
-        var col2 = String(row[2] || "").trim();
-        if (col0 === "World" || col0 === "Dunya" || col0 === "Dünya") {
-          tmToplam = col1 + " USD thousand";
-        } else if (col0 && col1 && col0 !== "Importers" && col0 !== "Ithalatcilar" && !col0.includes("Value")) {
-          tmUlkeler.push([col0, col1 + " USD thousand", col2 + "%"]);
+        if (data[i] && data[i][0] === "Importers") {
+          headerIdx = i;
+          var header = data[i];
+          // En son yil kolonunu bul
+          for (var j = header.length - 1; j >= 0; j--) {
+            if (header[j] && String(header[j]).match(/\d{4}/)) {
+              lastValCol = j;
+              break;
+            }
+          }
+          // Share kolonunu bul
+          for (var k = 0; k < header.length; k++) {
+            if (header[k] && String(header[k]).toLowerCase().includes("share")) {
+              shareCol = k;
+              break;
+            }
+          }
+          break;
         }
       }
+
+      if (headerIdx < 0) {
+        lg("Trademap formati tanınamadı. Header bulunamadı.", "er");
+        return;
+      }
+
+      for (var r = headerIdx + 1; r < data.length; r++) {
+        var row = data[r];
+        if (!row || !row[0]) continue;
+        var ulke = String(row[0]).trim();
+        var val = lastValCol >= 0 ? String(row[lastValCol] || "").trim() : "";
+        var share = shareCol >= 0 ? String(row[shareCol] || "").trim() : "";
+        if (!val) continue;
+        if (ulke === "World") {
+          tmToplam = val + " USD thousand";
+        } else if (ulke && ulke !== "Importers") {
+          tmUlkeler.push([ulke, val + " USD thousand", share ? share + "%" : ""]);
+        }
+      }
+
       tmUlkeler = tmUlkeler.slice(0, 10);
-      lg("Excel okundu: " + tmUlkeler.length + " ulke bulundu", "ok");
+      lg("Excel okundu: " + tmUlkeler.length + " ulke, Toplam: " + tmToplam, "ok");
       document.getElementById("devam-btn").style.display = "block";
     } catch(err) {
       lg("Excel okuma hatasi: " + err.message, "er");
