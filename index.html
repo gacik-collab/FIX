@@ -204,7 +204,7 @@ async function run() {
     lg("2025 ihracat verisi sorgulanıyor (web arama)...");
     var tSys = "Sen Turkiye dis ticaret istatistikleri konusunda uzman bir analistsin. Web'den gercek Trademap veya TUIK verilerini ara ve bul. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"toplam\":\"USD deger\",\"ulkeler\":[[\"ulke adi\",\"USD miktar\",\"% pay\"],[\"ulke adi\",\"USD miktar\",\"% pay\"]]}";
     var tUsr = "Trademap.org veya tuik.gov.tr sitesinden Turkiye'nin HS6 kodu " + gJson.hs6 + " olan '" + gJson.aciklama + "' urunu icin en guncel ihracat verilerini ara. En buyuk 10 alici ulkeyi ve toplam ihracat degerini bul. Gercek verileri JSON olarak don.";
-    var tRaw = await ai(tSys, tUsr, true, true);
+    var tRaw = await ai(tSys, tUsr, false, true);
     var tObj = pj(tRaw) || {};
     var pUlk = safeArr(tObj, "ulkeler");
     pUlk = pUlk.filter(function(u) { return Array.isArray(u) && u.length >= 1; });
@@ -227,7 +227,7 @@ async function run() {
     lg("Potansiyel musteriler arastiriliyor...");
     var mSys = "Sen uluslararasi B2B ticaret uzmanisın. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"firmalar\":[[\"firma adi\",\"ulke\",\"sektor\"],[\"firma adi\",\"ulke\",\"sektor\"]]}";
     var mUsr = "Urun: " + gJson.aciklama + " (GTIP: " + gJson.hs12 + ")\nBu urunu ithal edebilecek GERCEK uluslararasi firmalari listele. 8-10 firma, farkli ulkelerden.";
-    var mRaw = await ai(mSys, mUsr, true);
+    var mRaw = await ai(mSys, mUsr, false);
     var mObj = pj(mRaw) || {};
     var fArr = safeArr(mObj, "firmalar");
     fArr = fArr.filter(function(f) { return Array.isArray(f) && f.length >= 1; });
@@ -282,3 +282,4 @@ async function run() {
 </script>
 </body>
 </html>
+
