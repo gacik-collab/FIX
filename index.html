@@ -126,9 +126,9 @@ function safeArr(o, k) {
   return [];
 }
 
-async function ai(s, u, haiku) {
+async function ai(s, u, haiku, search) {
   var body = {system: s, user: u};
-  if (haiku) body.useHaiku = true;
+  if (haiku) body.useHaiku = true;`n  if (search) body.useSearch = true;
   var r = await fetch("/api/ai", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
@@ -206,7 +206,7 @@ async function run() {
     lg("2024 ihracat verisi sorgulanıyor...");
     var tSys = "Sen Turkiye dis ticaret istatistikleri konusunda uzman bir analistsin. Trademap ve TUIK verilerine hakimsin. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"toplam\":\"USD deger\",\"ulkeler\":[[\"ulke adi\",\"USD miktar\",\"% pay\"],[\"ulke adi\",\"USD miktar\",\"% pay\"]]}";
     var tUsr = "Turkiye'nin HS6 kodu " + gJson.hs6 + " olan '" + gJson.aciklama + "' urunu icin 2024 yili ihracat verilerini ver.\n- En buyuk 10 alici ulkeyi listele\n- Rakamlar USD cinsinden olmali\n- Gercek veya tahmini degerler kabul edilir\n- toplam alani toplam ihracat degerini gostersin";
-    var tRaw = await ai(tSys, tUsr, false);
+    var tRaw = await ai(tSys, tUsr, false, true);
     var tObj = pj(tRaw) || {};
     var pUlk = safeArr(tObj, "ulkeler");
     pUlk = pUlk.filter(function(u) { return Array.isArray(u) && u.length >= 1; });
