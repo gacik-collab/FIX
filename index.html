@@ -86,7 +86,14 @@ function ss(n){for(var i=0;i<6;i++){var e=document.getElementById("s"+i);e.class
 function lg(msg,type){var d=document.createElement("div");d.className="log-"+(type||"inf");d.textContent=msg;var ll=document.getElementById("ll");ll.appendChild(d);ll.scrollTop=ll.scrollHeight;}
 function pj(s){try{s=s.replace(/```json|```/g,"").trim();var m=s.match(/\{[\s\S]*\}/);return m?JSON.parse(m[0]):null;}catch(e){return null;}}
 function safeArr(o,k){if(!o)return[];if(k&&Array.isArray(o[k]))return o[k];var ks=Object.keys(o);for(var i=0;i<ks.length;i++){if(Array.isArray(o[ks[i]]))return o[ks[i]];}return[];}
-async function ai(s,u,haiku){var body={system:s,user:u};if(haiku)body.useHaiku=true;var r=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});var d=await r.json();if(d.error)throw new Error(d.error);return d.text||"";}
+async function ai(s,u,haiku){
+var body={system:s,user:u};
+if(haiku)body.useHaiku=true;
+var r=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+var d=await r.json();
+if(d.error)throw new Error(d.error);
+return d.text||"";
+}
 async function postApps(p){
   for(var i=0;i<3;i++){
     try{
