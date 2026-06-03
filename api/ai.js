@@ -10,7 +10,6 @@ export default async function handler(req, res) {
   try {
     const body = req.body;
 
-    // Apps Script proxy
     if (body.type === 'apps_script' || body.dosyaAdi) {
       const payload = body.type === 'apps_script' ? body.payload : body;
       const r = await fetch(APPS_URL, {
@@ -26,25 +25,35 @@ export default async function handler(req, res) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return res.status(500).json({error:'ANTHROPIC_API_KEY tanimli degil'});
 
-    // Standart AI modu - Sonnet ile daha guclu
-    const { system, user, useHaiku } = body;
+    const { system, user, useHaiku, useSearch } = body;
     if (!system || !user) return res.status(400).json({error:'system ve user gerekli'});
 
-    // Trademap/pazar sorgusu icin Sonnet, diger sorgular icin Haiku
     const model = useHaiku ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
+
+    const requestBody = {
+      model: model,
+      max_tokens: 3000,
+      system: system,
+      messages: [{role:'user', content: user}]
+    };
+
+    if (useSearch) {
+      requestBody.tools = [{
+        type: 'web_search_20250305',
+        name: 'web_search',
+        max_uses: 3
+      }];
+    }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05'
       },
-      body: JSON.stringify({
-        model: model,
-        max_tokens: 3000,
-        messages: [{role:'user', content: system + '\n\n' + user}]
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
@@ -53,9 +62,12 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-    const text = data.content?.[0]?.text || '';
-    return res.status(200).json({text});
+    const text = data.content
+      ?.filter(b => b.type === 'text')
+      ?.map(b => b.text)
+      ?.join('') || '';
 
+    return res.status(200).json({text});
   } catch(e) {
     return res.status(500).json({error:e.message});
   }
