@@ -187,7 +187,7 @@ async function run() {
     } else if (mode === "w") {
       gUsr = "Web sitesi: " + inp + "\nBu firmanin ana urununu belirle ve o urunun 12 haneli GTIP kodunu JSON olarak don.";
     } else {
-      gUsr = "Urun adi: " + inp + "\nBu urunun Turkiye Gumruk Tarife sistemindeki 12 haneli GTIP kodunu bul ve JSON olarak don. hs12 tam 12 rakam olmali.";
+      gUsr = "Urun adi: " + inp + "\nBu urunun Turkiye Gumruk Tarife Istatistik Pozisyonu kodunu bul. Turkiye GTIP sistemi 12 haneli olup son 6 hane istatistik kodudur. Ornek gecerli kodlar: 420291000090, 720811000011, 610910100010. Uydurma, sadece gercek ve gecerli Turkiye GTIP kodu ver. hs12 alani tam 12 rakamdan olusacak.";
     }
     var gRaw = await ai(gSys, gUsr, true);
     var gJson = pj(gRaw);
