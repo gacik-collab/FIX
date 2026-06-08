@@ -101,7 +101,8 @@ tr:hover td{background:#f8faff}
 
   <div id="tm-box">
     <h3>📊 Trademap'ten Veri Yukle</h3>
-    <p>GTIP kodu secildi. Simdi Trademap'ten gercek ihracat verisini indirin:</p>
+    <p id="tm-gtip-bilgi" style="font-size:.85rem;font-weight:700;color:#92400e;margin-bottom:8px"></p>
+    <p>Trademap'ten bu GTİP icin ihracat verisini indirin:</p>
     <a id="tm-link" href="#" target="_blank" class="tm-btn">🔗 Trademap'i Ac (Excel Indir)</a>
     <p style="font-size:.78rem;color:#92400e;margin-bottom:10px">Acilan sayfada: <strong>Download → Excel</strong> tiklayin, dosyayi kaydedin, asagiya yukleyin.</p>
     <div class="upload-area" onclick="document.getElementById('excel-input').click()">
@@ -293,6 +294,7 @@ function gtipSec(gtipObj) {
 
   var tmUrl = "https://www.trademap.org/Country_SelProductCountry.aspx?nvpm=1%7c792%7c%7c%7c%7c" + gtipObj.hs6 + "%7c%7c%7c6%7c1%7c1%7c2%7c2%7c1%7c2%7c1%7c1%7c1";
   document.getElementById("tm-link").href = tmUrl;
+  document.getElementById("tm-gtip-bilgi").textContent = "Secilen GTİP: " + gtipObj.hs12 + " — " + gtipObj.aciklama;
   document.getElementById("tm-box").style.display = "block";
   ss(1);
 }
