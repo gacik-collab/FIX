@@ -18,12 +18,11 @@ body{font-family:"Segoe UI",Arial,sans-serif;background:#f0f4ff;min-height:100vh
 .card{background:#fff;border-radius:16px;padding:36px;box-shadow:0 2px 16px rgba(0,0,0,.08)}
 label{display:block;font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
 .hint{font-size:.75rem;color:#6b7280;margin-top:4px;margin-bottom:16px}
-input[type=text]{width:100%;padding:12px 16px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:.95rem;outline:none;transition:border .2s}
-input[type=text]:focus{border-color:#2563eb}
-.tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.tab{padding:8px 16px;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;cursor:pointer;font-size:.82rem;color:#374151;transition:all .2s}
-.tab.on{background:#2563eb;color:#fff;border-color:#2563eb}
+input[type=text],textarea{width:100%;padding:12px 16px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:.95rem;outline:none;transition:border .2s;font-family:inherit}
+input[type=text]:focus,textarea:focus{border-color:#2563eb}
+textarea{resize:vertical;min-height:80px}
 .sep{height:1px;background:#f3f4f6;margin:24px 0}
+.optional-tag{font-size:.72rem;color:#9ca3af;font-weight:400;text-transform:none;letter-spacing:0;margin-left:6px}
 button#btn{width:100%;padding:16px;background:linear-gradient(135deg,#1a3a8f,#2563eb);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:24px}
 button#btn:disabled{opacity:.6;cursor:not-allowed}
 #tm-box{display:none;margin-top:20px;background:#fffbeb;border:1.5px solid #f59e0b;border-radius:12px;padding:20px}
@@ -73,14 +72,20 @@ tr:hover td{background:#f8faff}
     <label>Musteri / Firma Adi</label>
     <input type="text" id="firma" placeholder="ornek: Arcelik, CMK Kagit, ABC Ltd...">
     <p class="hint">Dosya adi: <strong>FIRMA ADI - ON CALISMA</strong> olarak kaydedilir</p>
+
     <div class="sep"></div>
-    <label>Urun Adi / 12 Haneli GTIP / Website</label>
-    <div class="tabs">
-      <button class="tab on" id="t-u" onclick="setTab('u')">Urun Adi</button>
-      <button class="tab" id="t-g" onclick="setTab('g')">GTIP (12 hane)</button>
-      <button class="tab" id="t-w" onclick="setTab('w')">Web Sitesi</button>
-    </div>
-    <input type="text" id="inp" placeholder="dokme demir tava, celik boru...">
+
+    <label>GTİP Kodu <span class="optional-tag">(opsiyonel — 12 hane)</span></label>
+    <input type="text" id="gtip" placeholder="ornek: 870829909012">
+    <p class="hint">Bilmiyorsaniz bos birakin, sistem otomatik bulacak</p>
+
+    <label>Web Sitesi <span class="optional-tag">(opsiyonel — firma analizi icin)</span></label>
+    <input type="text" id="website" placeholder="ornek: www.firmam.com.tr">
+    <p class="hint">Girilirse: Firma Profili, Rakip Analizi, FIX Onerisi bolumleri de doldurulur</p>
+
+    <label>Not / Ek Bilgi <span class="optional-tag">(opsiyonel)</span></label>
+    <textarea id="not" placeholder="Urun aciklamasi, hedef pazar, ozel notlar... (Claude'un dogru analiz yapmasina yardimci olur)"></textarea>
+
     <button id="btn" onclick="run()">Raporu Otomatik Hazirla</button>
   </div>
 
@@ -104,19 +109,10 @@ tr:hover td{background:#f8faff}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 var FOLDER_URL = "https://drive.google.com/drive/folders/1WaBrSm7Ey3WUq3K3foRITFiuKdzltwer";
-var mode = "u", running = false;
+var running = false;
 var gGtip = null;
 var tmUlkeler = [];
 var tmToplam = "";
-
-function setTab(m) {
-  mode = m;
-  ["u","g","w"].forEach(function(x) {
-    document.getElementById("t-"+x).className = "tab" + (x === m ? " on" : "");
-  });
-  var ph = {u:"dokme demir tava, celik boru...", g:"940320000000 (12 haneli GTIP)", w:"www.firmam.com..."};
-  document.getElementById("inp").placeholder = ph[m];
-}
 
 function ss(n) {
   for (var i = 0; i < 7; i++) {
@@ -282,9 +278,11 @@ function excelYukle(input) {
 async function run() {
   if (running) return;
   var firma = document.getElementById("firma").value.trim();
-  var inp = document.getElementById("inp").value.trim();
+  var gtipGirdi = document.getElementById("gtip").value.trim();
+  var website = document.getElementById("website").value.trim();
+  var not = document.getElementById("not").value.trim();
+
   if (!firma) { alert("Firma adi girin!"); return; }
-  if (!inp) { alert("Urun/GTIP/Website girin!"); return; }
 
   running = true;
   document.getElementById("btn").disabled = true;
@@ -294,16 +292,19 @@ async function run() {
   ss(0);
 
   try {
+    // ADIM 1: GTIP
     lg("GTIP belirleniyor...");
-    var gSys = "Sen Turkiye Gumruk Tarife Istatistik Pozisyonu (GTIP) konusunda uzman bir dis ticaret danismanisin. Verilen urune en uygun GTIP kodunu bul. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"hs12\":\"XXXXXXXXXXXX\",\"hs6\":\"XXXXXX\",\"hs4\":\"XXXX\",\"aciklama\":\"urun aciklamasi\",\"kategori\":\"sektor adi\"}\nhs12 tam 12 rakam olmali, gercek ve gecerli Turkiye GTIP kodu ver. Ornek: 420291000090, 720811000011";
-    var gUsr;
-    if (mode === "g") {
-      gUsr = "Verilen GTIP kodu: " + inp + "\nBu kod icin bilgileri JSON olarak don.";
-    } else if (mode === "w") {
-      gUsr = "Web sitesi: " + inp + "\nBu firmanin ana urununu belirle ve GTIP kodunu JSON olarak don.";
-    } else {
-      gUsr = "Urun adi: " + inp + "\nBu urunun gercek 12 haneli Turkiye GTIP kodunu bul ve JSON olarak don.";
+    var gSys = "Sen Turkiye Gumruk Tarife Istatistik Pozisyonu (GTIP) konusunda uzman bir dis ticaret danismanisin. Verilen bilgilere gore en uygun GTIP kodunu bul. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"hs12\":\"XXXXXXXXXXXX\",\"hs6\":\"XXXXXX\",\"hs4\":\"XXXX\",\"aciklama\":\"urun aciklamasi\",\"kategori\":\"sektor adi\"}\nhs12 tam 12 rakam olmali, gercek ve gecerli Turkiye GTIP kodu ver.";
+
+    var gUsr = "Firma: " + firma;
+    if (gtipGirdi) {
+      gUsr = "Verilen GTIP kodu: " + gtipGirdi + "\nFirma: " + firma + "\nBu kod icin bilgileri JSON olarak don.";
+    } else if (website) {
+      gUsr += "\nWeb sitesi: " + website;
     }
+    if (not) gUsr += "\nEk bilgi: " + not;
+    if (!gtipGirdi) gUsr += "\nBu firma/urun icin gercek 12 haneli Turkiye GTIP kodunu bul ve JSON olarak don.";
+
     var gRaw = await ai(gSys, gUsr, true);
     var gJson = pj(gRaw);
     if (!gJson || !gJson.hs12) throw new Error("GTIP bulunamadi.");
@@ -335,7 +336,8 @@ async function devamEt() {
   document.getElementById("lb").style.display = "block";
 
   var firma = document.getElementById("firma").value.trim();
-  var inpVal = document.getElementById("inp").value.trim();
+  var website = document.getElementById("website").value.trim();
+  var not = document.getElementById("not").value.trim();
 
   try {
     var pUlk = tmUlkeler;
@@ -346,7 +348,9 @@ async function devamEt() {
     // ADIM 3: Sektorler
     lg("Hedef sektorler belirleniyor...");
     var sSys = "Sen ihracat ve B2B pazar gelistirme uzmanisın. Verilen urun icin ticari olarak girilebilecek tum mantikli musteri segmentlerini belirle. Sektor belirlerken su dort grubu mutlaka dikkate al:\n1. Son kullanicilar (urunu dogrudan kullananlar)\n2. Proje firmalari (urunu projelerine dahil edenler: EPC, muhendislik, muteahhit)\n3. OEM ve entegratörler (urunu urunlerine entegre edenler)\n4. Distributor ve ithalatcilar (urunu dagitanlar veya satanlar)\nAmac en buyuk sektoru degil, urunun ticari olarak girebilecegi tum mantikli musteri segmentlerini cikarmaktir. YALNIZCA JSON formatinda yanit ver:\n{\"sektorler\":[[\"sektor adi\",\"neden hedef olabilir\"]]}";
-    var sUsr = "Urun: " + gGtip.aciklama + " (GTIP: " + gGtip.hs12 + ")\nBu urunu kullanabilecek en onemli 6-8 sektoru listele.";
+    var sUsr = "Urun: " + gGtip.aciklama + " (GTIP: " + gGtip.hs12 + ")\n";
+    if (not) sUsr += "Ek bilgi: " + not + "\n";
+    sUsr += "Bu urunu kullanabilecek en onemli 6-8 sektoru listele.";
     var sRaw = await ai(sSys, sUsr, true);
     var sObj = pj(sRaw) || {};
     var sektorler = safeArr(sObj, "sektorler");
@@ -364,18 +368,24 @@ async function devamEt() {
     lg(fArr.length + " potansiyel firma bulundu", "ok");
     ss(4);
 
-    // ADIM 4.5: FIX Analizi
-    lg("FIX analiz bolumleri hazirlaniyor...");
-    var aSys = "Sen FIX Danismanlik A.S. adina ihracat on calisma raporu hazirlayan kıdemli bir dis ticaret danismanisin. Verilen firma ve urun bilgisini kullanarak firmayı web'de arastir. YALNIZCA asagidaki JSON formatinda yanit ver, baska hicbir sey yazma, markdown yok:\n{\"yorum_blogu\":\"Ulkeler tablosunun altina gelecek, firmaya ozel 3-4 cumle analiz. Hangi pazarin neden oncelikli oldugunu FIX diliyle acikla.\",\"firma_profili\":\"Firma kunyesi ve degerlendirme. Format:\\nFirma: ...\\nSektor: ...\\nKurulus: ...\\nMerkez: ...\\nWeb: ...\\nIhracat: ...\\n\\n✅ Mevcut ve guclu:\\n- ...\\n🔶 Gelistirme firsati:\\n- ...\\n🔷 Oncelikli gelisim alani:\\n- ...\",\"turk_rakip\":\"Turk rakip adi + firmayla konumlanma farki analizi (2-3 paragraf, FIX diliyle)\",\"kazanilabilir_bosluklar\":\"4-6 madde FIX diliyle. Her madde tire ile baslasin.\",\"fix_onerisi\":\"UTD/KIVIG model yonlendirmesi, oncelikli pazar/kategori, marka mesaji, ilk adim, TURQUALITY destegi. FIX is ortagi tonu.\"}\n\nFIX DILI ZORUNLU: eksik/yetersiz/problem/reddedilir KULLANMA. Yerine: gelistirme firsati, bir ust seviyeye tasiyalim, one gecme potansiyeli yuksek, birlikte degerlendirebiliriz. Ton: rapor sunan degil sureci yoneten is ortagi.";
-    var aUsr = "Firma: " + firma + "\nUrun/GTIP: " + gGtip.aciklama + " (" + gGtip.hs12 + ")\nGiris: " + (mode === "w" ? "Website: " + inpVal : mode === "g" ? "GTIP: " + inpVal : "Urun: " + inpVal);
-    var aRaw = await ai(aSys, aUsr, false);
-    var aObj = pj(aRaw) || {};
-    var yorumBlogu = aObj.yorum_blogu || "";
-    var firmaProfili = aObj.firma_profili || "";
-    var turkRakip = aObj.turk_rakip || "";
-    var kazanilabilirBosluklar = aObj.kazanilabilir_bosluklar || "";
-    var fixOnerisi = aObj.fix_onerisi || "";
-    lg("FIX analiz bolumleri hazir", "ok");
+    // ADIM 4.5: FIX Analizi — sadece website girilmisse
+    var yorumBlogu = "", firmaProfili = "", turkRakip = "", kazanilabilirBosluklar = "", fixOnerisi = "";
+    if (website) {
+      lg("FIX analiz bolumleri hazirlaniyor...");
+      var aSys = "Sen FIX Danismanlik A.S. adina ihracat on calisma raporu hazirlayan kıdemli bir dis ticaret danismanisin. Verilen firma web sitesini ve urun bilgisini kullanarak firmayı arastir. YALNIZCA asagidaki JSON formatinda yanit ver, baska hicbir sey yazma, markdown yok:\n{\"yorum_blogu\":\"Ulkeler tablosunun altina gelecek, firmaya ozel 3-4 cumle analiz. Hangi pazarin neden oncelikli oldugunu FIX diliyle acikla.\",\"firma_profili\":\"Firma kunyesi ve degerlendirme. Format:\\nFirma: ...\\nSektor: ...\\nKurulus: ...\\nMerkez: ...\\nWeb: ...\\nIhracat: ...\\n\\n✅ Mevcut ve guclu:\\n- ...\\n🔶 Gelistirme firsati:\\n- ...\\n🔷 Oncelikli gelisim alani:\\n- ...\",\"turk_rakip\":\"Turk rakip adi + firmayla konumlanma farki analizi (2-3 paragraf, FIX diliyle)\",\"kazanilabilir_bosluklar\":\"4-6 madde FIX diliyle. Her madde tire ile baslasin.\",\"fix_onerisi\":\"UTD/KIVIG model yonlendirmesi, oncelikli pazar/kategori, marka mesaji, ilk adim, TURQUALITY destegi. FIX is ortagi tonu.\"}\n\nFIX DILI ZORUNLU: eksik/yetersiz/problem/reddedilir KULLANMA. Yerine: gelistirme firsati, bir ust seviyeye tasiyalim, one gecme potansiyeli yuksek, birlikte degerlendirebiliriz. Ton: rapor sunan degil sureci yoneten is ortagi.";
+      var aUsr = "Firma: " + firma + "\nWeb sitesi: " + website + "\nUrun/GTIP: " + gGtip.aciklama + " (" + gGtip.hs12 + ")";
+      if (not) aUsr += "\nEk bilgi: " + not;
+      var aRaw = await ai(aSys, aUsr, false);
+      var aObj = pj(aRaw) || {};
+      yorumBlogu = aObj.yorum_blogu || "";
+      firmaProfili = aObj.firma_profili || "";
+      turkRakip = aObj.turk_rakip || "";
+      kazanilabilirBosluklar = aObj.kazanilabilir_bosluklar || "";
+      fixOnerisi = aObj.fix_onerisi || "";
+      lg("FIX analiz bolumleri hazir", "ok");
+    } else {
+      lg("Web sitesi girilmedi, analiz bolumleri atlanıyor", "inf");
+    }
     ss(5);
 
     // ADIM 5: Drive
