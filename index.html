@@ -103,6 +103,7 @@ tr:hover td{background:#f8faff}
     <h3>📊 Trademap'ten Veri Yukle</h3>
     <p id="tm-gtip-bilgi" style="font-size:.85rem;font-weight:700;color:#92400e;margin-bottom:8px"></p>
     <p>Trademap'ten bu GTİP icin ihracat verisini indirin:</p>
+    <button onclick="gtipGeriDon()" style="background:none;border:none;color:#92400e;font-size:.8rem;cursor:pointer;text-decoration:underline;padding:0;margin-bottom:12px">← GTİP Degistir</button>
     <a id="tm-link" href="#" target="_blank" class="tm-btn">🔗 Trademap'i Ac (Excel Indir)</a>
     <p style="font-size:.78rem;color:#92400e;margin-bottom:10px">Acilan sayfada: <strong>Download → Excel</strong> tiklayin, dosyayi kaydedin, asagiya yukleyin.</p>
     <div class="upload-area" onclick="document.getElementById('excel-input').click()">
@@ -293,6 +294,16 @@ function excelYukle(input) {
     }
   };
   reader.readAsArrayBuffer(file);
+}
+
+function gtipGeriDon() {
+  gGtip = null;
+  document.getElementById("tm-box").style.display = "none";
+  document.getElementById("gtip-secim-box").style.display = "block";
+  document.getElementById("devam-btn").style.display = "none";
+  document.getElementById("file-name").textContent = "";
+  tmUlkeler = [];
+  tmToplam = "";
 }
 
 function gtipSec(gtipObj) {
