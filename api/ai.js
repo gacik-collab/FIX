@@ -75,6 +75,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model,
         max_tokens: 2000,
+        tools: [{type: 'web_search_20250305', name: 'web_search'}],
         messages: [{role:'user', content: system + '\n\n' + user}]
       })
     });
