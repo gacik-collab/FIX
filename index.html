@@ -124,6 +124,15 @@ var running = false;
 var gGtip = null;
 var tmUlkeler = [];
 var tmToplam = "";
+var gtipDB = [];
+fetch('/gtip_data.json').then(function(r){return r.json();}).then(function(d){gtipDB=d;}).catch(function(){});
+
+function gtipDogrula(hs12) {
+  if (!gtipDB.length) return null;
+  var kod = hs12.replace(/'/g,'').trim();
+  var bulunan = gtipDB.find(function(g){ return g.code === kod; });
+  return bulunan || null;
+}
 
 function ss(n) {
   for (var i = 0; i < 7; i++) {
@@ -348,14 +357,28 @@ async function run() {
 
     if (!secenekler || secenekler.length === 0) throw new Error("GTIP secenek listesi alinamadi.");
 
+    // JSON'da dogrula
+    var dogrulanmis = [];
+    secenekler.forEach(function(s) {
+      if (!s.hs6 || s.hs6.length < 6) s.hs6 = s.hs12.substring(0, 6);
+      var db = gtipDogrula(s.hs12);
+      if (db) {
+        s.aciklama = db.label;
+        dogrulanmis.push(s);
+      } else {
+        dogrulanmis.push(s); // DB'de bulunamasa da goster
+      }
+    });
+
     // Secenek kutusunu goster
     var optBox = document.getElementById("gtip-options");
     optBox.innerHTML = "";
-    secenekler.forEach(function(s) {
-      if (!s.hs6 || s.hs6.length < 6) s.hs6 = s.hs12.substring(0, 6);
+    dogrulanmis.forEach(function(s) {
+      var db = gtipDogrula(s.hs12);
       var btn = document.createElement("button");
       btn.className = "gtip-option";
-      btn.innerHTML = "<strong>" + s.hs12 + " — " + s.aciklama + "</strong><span>" + (s.neden || s.kategori || "") + "</span>";
+      var dogruTag = db ? " ✅" : " ⚠️";
+      btn.innerHTML = "<strong>" + s.hs12 + dogruTag + " — " + s.aciklama + "</strong><span>" + (s.neden || s.kategori || "") + "</span>";
       btn.onclick = (function(gtipObj) {
         return function() { gtipSec(gtipObj); };
       })(s);
