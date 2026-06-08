@@ -84,7 +84,7 @@ export default async function handler(req, res) {
       return res.status(500).json({error:'Anthropic API hatasi: '+err});
     }
     const data = await response.json();
-    const text = data.content?.[0]?.text || '';
+    const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
     return res.status(200).json({text});
   } catch(e) {
     return res.status(500).json({error:e.message});
