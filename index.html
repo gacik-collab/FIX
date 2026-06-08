@@ -64,8 +64,9 @@ tr:hover td{background:#f8faff}
   <div class="step" id="s1">Trademap</div>
   <div class="step" id="s2">Sektorler</div>
   <div class="step" id="s3">Musteriler</div>
-  <div class="step" id="s4">Drive</div>
-  <div class="step" id="s5">Hazir</div>
+  <div class="step" id="s4">Analiz</div>
+  <div class="step" id="s5">Drive</div>
+  <div class="step" id="s6">Hazir</div>
 </div>
 <div class="main">
   <div class="card">
@@ -118,7 +119,7 @@ function setTab(m) {
 }
 
 function ss(n) {
-  for (var i = 0; i < 6; i++) {
+  for (var i = 0; i < 7; i++) {
     var e = document.getElementById("s"+i);
     e.className = "step" + (i < n ? " done" : i === n ? " on" : "");
   }
@@ -224,14 +225,12 @@ function excelYukle(input) {
         data = XLSX.utils.sheet_to_json(ws, {header: 1});
       }
 
-      // Header satirini bul (Importers kolonu olan satir)
       var headerIdx = -1;
       var lastValCol = -1;
       for (var i = 0; i < data.length; i++) {
         if (data[i] && data[i][0] === "Importers") {
           headerIdx = i;
           var header = data[i];
-          // En son yil kolonunu bul (en sagdaki 4 haneli yil)
           for (var j = header.length - 1; j >= 0; j--) {
             if (header[j] && String(header[j]).match(/\d{4}/)) {
               lastValCol = j;
@@ -242,17 +241,9 @@ function excelYukle(input) {
         }
       }
 
-      if (headerIdx < 0) {
-        lg("Trademap formati taninamadi. Header bulunamadi.", "er");
-        return;
-      }
+      if (headerIdx < 0) { lg("Trademap formati taninamadi. Header bulunamadi.", "er"); return; }
+      if (lastValCol < 0) { lg("Yil kolonu bulunamadi.", "er"); return; }
 
-      if (lastValCol < 0) {
-        lg("Yil kolonu bulunamadi.", "er");
-        return;
-      }
-
-      // Ham degerlerini topla (string olarak)
       var toplamHam = 0;
       var satirlar = [];
       for (var r = headerIdx + 1; r < data.length; r++) {
@@ -269,11 +260,9 @@ function excelYukle(input) {
         }
       }
 
-      // USD thousand oldugu icin *1000 yap
       var toplamUSD = toplamHam * 1000;
       tmToplam = "$" + toplamUSD.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
 
-      // Her ulke icin hacim ve pay hesapla
       satirlar.slice(0, 10).forEach(function(s) {
         var hacimUSD = s[1] * 1000;
         var pay = toplamUSD > 0 ? ((hacimUSD / toplamUSD) * 100).toFixed(2) + "%" : "";
@@ -346,6 +335,7 @@ async function devamEt() {
   document.getElementById("lb").style.display = "block";
 
   var firma = document.getElementById("firma").value.trim();
+  var inpVal = document.getElementById("inp").value.trim();
 
   try {
     var pUlk = tmUlkeler;
@@ -355,7 +345,7 @@ async function devamEt() {
 
     // ADIM 3: Sektorler
     lg("Hedef sektorler belirleniyor...");
-    var sSys = "Sen ihracat ve B2B pazar gelistirme uzmanisın. Verilen urun icin ticari olarak girilebilecek tum mantikli musteri segmentlerini belirle. Sektör belirlerken su dört grubu mutlaka dikkate al:\n1. Son kullanicilar (urunu dogrudan kullananlar)\n2. Proje firmalari (urunu projelerine dahil edenler: EPC, muhendislik, muteahhit)\n3. OEM ve entegratörler (urunu urunlerine entegre edenler)\n4. Distribütörler ve ithalatcilar (urunu dagitanlar veya satanlar)\nAmac en buyuk sektoru degil, urunun ticari olarak girebilecegi tum mantikli musteri segmentlerini cikarmaktir. YALNIZCA JSON formatinda yanit ver:\n{\"sektorler\":[[\"sektor adi\",\"neden hedef olabilir\"]]}";
+    var sSys = "Sen ihracat ve B2B pazar gelistirme uzmanisın. Verilen urun icin ticari olarak girilebilecek tum mantikli musteri segmentlerini belirle. Sektor belirlerken su dort grubu mutlaka dikkate al:\n1. Son kullanicilar (urunu dogrudan kullananlar)\n2. Proje firmalari (urunu projelerine dahil edenler: EPC, muhendislik, muteahhit)\n3. OEM ve entegratörler (urunu urunlerine entegre edenler)\n4. Distributor ve ithalatcilar (urunu dagitanlar veya satanlar)\nAmac en buyuk sektoru degil, urunun ticari olarak girebilecegi tum mantikli musteri segmentlerini cikarmaktir. YALNIZCA JSON formatinda yanit ver:\n{\"sektorler\":[[\"sektor adi\",\"neden hedef olabilir\"]]}";
     var sUsr = "Urun: " + gGtip.aciklama + " (GTIP: " + gGtip.hs12 + ")\nBu urunu kullanabilecek en onemli 6-8 sektoru listele.";
     var sRaw = await ai(sSys, sUsr, true);
     var sObj = pj(sRaw) || {};
@@ -374,6 +364,20 @@ async function devamEt() {
     lg(fArr.length + " potansiyel firma bulundu", "ok");
     ss(4);
 
+    // ADIM 4.5: FIX Analizi
+    lg("FIX analiz bolumleri hazirlaniyor...");
+    var aSys = "Sen FIX Danismanlik A.S. adina ihracat on calisma raporu hazirlayan kıdemli bir dis ticaret danismanisin. Verilen firma ve urun bilgisini kullanarak firmayı web'de arastir. YALNIZCA asagidaki JSON formatinda yanit ver, baska hicbir sey yazma, markdown yok:\n{\"yorum_blogu\":\"Ulkeler tablosunun altina gelecek, firmaya ozel 3-4 cumle analiz. Hangi pazarin neden oncelikli oldugunu FIX diliyle acikla.\",\"firma_profili\":\"Firma kunyesi ve degerlendirme. Format:\\nFirma: ...\\nSektor: ...\\nKurulus: ...\\nMerkez: ...\\nWeb: ...\\nIhracat: ...\\n\\n✅ Mevcut ve guclu:\\n- ...\\n🔶 Gelistirme firsati:\\n- ...\\n🔷 Oncelikli gelisim alani:\\n- ...\",\"turk_rakip\":\"Turk rakip adi + firmayla konumlanma farki analizi (2-3 paragraf, FIX diliyle)\",\"kazanilabilir_bosluklar\":\"4-6 madde FIX diliyle. Her madde tire ile baslasin.\",\"fix_onerisi\":\"UTD/KIVIG model yonlendirmesi, oncelikli pazar/kategori, marka mesaji, ilk adim, TURQUALITY destegi. FIX is ortagi tonu.\"}\n\nFIX DILI ZORUNLU: eksik/yetersiz/problem/reddedilir KULLANMA. Yerine: gelistirme firsati, bir ust seviyeye tasiyalim, one gecme potansiyeli yuksek, birlikte degerlendirebiliriz. Ton: rapor sunan degil sureci yoneten is ortagi.";
+    var aUsr = "Firma: " + firma + "\nUrun/GTIP: " + gGtip.aciklama + " (" + gGtip.hs12 + ")\nGiris: " + (mode === "w" ? "Website: " + inpVal : mode === "g" ? "GTIP: " + inpVal : "Urun: " + inpVal);
+    var aRaw = await ai(aSys, aUsr, false);
+    var aObj = pj(aRaw) || {};
+    var yorumBlogu = aObj.yorum_blogu || "";
+    var firmaProfili = aObj.firma_profili || "";
+    var turkRakip = aObj.turk_rakip || "";
+    var kazanilabilirBosluklar = aObj.kazanilabilir_bosluklar || "";
+    var fixOnerisi = aObj.fix_onerisi || "";
+    lg("FIX analiz bolumleri hazir", "ok");
+    ss(5);
+
     // ADIM 5: Drive
     lg("Drive a kaydediliyor...");
     var sonuc = await postApps({
@@ -385,9 +389,14 @@ async function devamEt() {
       toplam: pTop,
       ulkeler: pUlk,
       sektorler: sektorler,
-      firmalar: fArr
+      firmalar: fArr,
+      yorum_blogu: yorumBlogu,
+      firma_profili: firmaProfili,
+      turk_rakip: turkRakip,
+      kazanilabilir_bosluklar: kazanilabilirBosluklar,
+      fix_onerisi: fixOnerisi
     });
-    ss(5);
+    ss(6);
     lg("Drive a kaydedildi!", "ok");
 
     var docUrl = sonuc.url || "";
