@@ -131,8 +131,18 @@ fetch('/gtip_data.json').then(function(r){return r.json();}).then(function(d){gt
 function gtipDogrula(hs12) {
   if (!gtipDB.length) return null;
   var kod = hs12.replace(/'/g,'').trim();
-  var bulunan = gtipDB.find(function(g){ return g.code === kod; });
-  return bulunan || null;
+  return gtipDB.find(function(g){ return g.code === kod; }) || null;
+}
+
+function gtipOnFiltreleme(kelimeler) {
+  if (!gtipDB.length) return [];
+  var aramaStr = kelimeler.toLowerCase();
+  var kelimeListesi = aramaStr.split(/[\s,]+/).filter(function(k){ return k.length > 2; });
+  var sonuclar = gtipDB.filter(function(g) {
+    var label = g.label.toLowerCase();
+    return kelimeListesi.some(function(k){ return label.includes(k); });
+  });
+  return sonuclar.slice(0, 80);
 }
 
 function ss(n) {
@@ -356,13 +366,20 @@ async function run() {
     }
 
     // GTIP bilinmiyorsa 3-5 secenek sun
-    var gSys2 = "Sen Turkiye Gumruk Tarife Istatistik Pozisyonu (GTIP) uzmanisisin. Verilen firma ve urun bilgisine gore en uygun 3-5 GTIP secenegi sun. YALNIZCA JSON formatinda yanit ver:\n{\"secenekler\":[{\"hs12\":\"XXXXXXXXXXXX\",\"hs6\":\"XXXXXX\",\"aciklama\":\"urun aciklamasi\",\"kategori\":\"sektor\",\"neden\":\"neden bu kod uygun\"}]}\nhs12 tam 12 rakam olmali. Gercek ve gecerli Turkiye GTIP kodlari ver.";
+    // JSON'dan on filtreleme
+    var aramaMetni = (firma + " " + (not || "") + " " + (website || "")).toLowerCase();
+    var onFiltreListesi = gtipOnFiltreleme(aramaMetni);
+    var listeStr = onFiltreListesi.length > 0
+      ? "\n\nARAYABILECEGIN GTIP LISTESI (SADECE bu listeden sec):\n" + onFiltreListesi.map(function(g){ return g.code + " — " + g.label; }).join("\n")
+      : "";
+
+    var gSys2 = "Sen Turkiye Gumruk Tarife Istatistik Pozisyonu (GTIP) uzmanisisin. Sana bir GTIP listesi verilecek. Bu listeden verilen firma ve urun bilgisine gore en uygun 3-5 GTIP sec. Listede olmayan kod kullanma. YALNIZCA JSON formatinda yanit ver:\n{\"secenekler\":[{\"hs12\":\"XXXXXXXXXXXX\",\"hs6\":\"XXXXXX\",\"aciklama\":\"urun aciklamasi\",\"kategori\":\"sektor\",\"neden\":\"neden bu kod uygun\"}]}";
     var gUsr2 = "Firma: " + firma;
     if (website) gUsr2 += "\nWeb sitesi: " + website;
     if (not) gUsr2 += "\nEk bilgi: " + not;
-    gUsr2 += "\nBu firma icin en uygun 3-5 GTIP kodunu oner.";
-
-    var gRaw2 = await ai(gSys2, gUsr2, false);
+    gUsr2 += listeStr;
+    gUsr2 += "\n\nYukaridaki listeden en uygun 3-5 GTIP kodunu sec.";
+    var gRaw2 = await ai(gSys2, gUsr2, true);
     var gJson2 = pj(gRaw2);
     var secenekler = safeArr(gJson2, "secenekler");
 
