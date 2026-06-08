@@ -233,7 +233,7 @@ function excelYukle(input) {
           var header = data[i];
           // En son yil kolonunu bul (en sagdaki 4 haneli yil)
           for (var j = header.length - 1; j >= 0; j--) {
-            if (header[j] && String(header[j]).match(/^\d{4}$/)) {
+            if (header[j] && String(header[j]).match(/\d{4}/)) {
               lastValCol = j;
               break;
             }
