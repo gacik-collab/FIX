@@ -347,7 +347,7 @@ async function devamEt() {
 
     // ADIM 3: Sektorler
     lg("Hedef sektorler belirleniyor...");
-    var sSys = "Sen ihracat ve B2B pazar gelistirme uzmanisın. Verilen urun icin ticari olarak girilebilecek tum mantikli musteri segmentlerini belirle. Sektor belirlerken su dort grubu mutlaka dikkate al:\n1. Son kullanicilar (urunu dogrudan kullananlar)\n2. Proje firmalari (urunu projelerine dahil edenler: EPC, muhendislik, muteahhit)\n3. OEM ve entegratörler (urunu urunlerine entegre edenler)\n4. Distributor ve ithalatcilar (urunu dagitanlar veya satanlar)\nAmac en buyuk sektoru degil, urunun ticari olarak girebilecegi tum mantikli musteri segmentlerini cikarmaktir. YALNIZCA JSON formatinda yanit ver:\n{\"sektorler\":[[\"sektor adi\",\"neden hedef olabilir\"]]}";
+    var sSys = "Sen ihracat uzmanisisin. Turkiye'nin bu urunu ihrac edebilecegi yurt disindaki musteri segmentlerini belirle. KURALLAR: 1) Tabloda mutlaka 'Distributor' veya urune ozel distributor ifadesi (ornek: Tarim Ilac Distributoru, Endustriyel Ekipman Distributoru) yer almali. 2) Sektorler birbirinden farkli olmali, tekrar etmemeli. 3) Her sektor yurt disindaki gercek bir alici tipini temsil etmeli. 4) 6-8 farkli segment listele. 5) Aciklama kismi o segmentin bu urunu neden ithal edecegini net sekilde anlat. YALNIZCA JSON formatinda yanit ver:\n{\"sektorler\":[[\"sektor adi\",\"aciklama\"]]}";
     var sUsr = "Urun: " + gGtip.aciklama + " (GTIP: " + gGtip.hs12 + ")\n";
     if (not) sUsr += "Ek bilgi: " + not + "\n";
     sUsr += "Bu urunu kullanabilecek en onemli 6-8 sektoru listele.";
