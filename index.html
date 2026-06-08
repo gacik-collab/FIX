@@ -189,7 +189,6 @@ async function postApps(p) {
 }
 
 function parseHtmlXls(html) {
-  // Trademap'in HTML formatindaki XLS dosyasini parse et
   var parser = new DOMParser();
   var doc = parser.parseFromString(html, "text/html");
   var rows = doc.querySelectorAll("tr");
@@ -216,12 +215,10 @@ function excelYukle(input) {
       tmToplam = "";
       var data = [];
 
-      // Trademap HTML-XLS formatini dene
       var text = new TextDecoder("utf-8").decode(new Uint8Array(e.target.result));
       if (text.indexOf("<!DOCTYPE") >= 0 || text.indexOf("<html") >= 0) {
         data = parseHtmlXls(text);
       } else {
-        // Gercek Excel formatini dene
         var wb = XLSX.read(e.target.result, {type: "array"});
         var ws = wb.Sheets[wb.SheetNames[0]];
         data = XLSX.utils.sheet_to_json(ws, {header: 1});
@@ -230,22 +227,14 @@ function excelYukle(input) {
       // Header satirini bul (Importers kolonu olan satir)
       var headerIdx = -1;
       var lastValCol = -1;
-      var shareCol = -1;
       for (var i = 0; i < data.length; i++) {
         if (data[i] && data[i][0] === "Importers") {
           headerIdx = i;
           var header = data[i];
-          // En son yil kolonunu bul
+          // En son yil kolonunu bul (en sagdaki 4 haneli yil)
           for (var j = header.length - 1; j >= 0; j--) {
-            if (header[j] && String(header[j]).match(/\d{4}/)) {
+            if (header[j] && String(header[j]).match(/^\d{4}$/)) {
               lastValCol = j;
-              break;
-            }
-          }
-          // Share kolonunu bul
-          for (var k = 0; k < header.length; k++) {
-            if (header[k] && String(header[k]).toLowerCase().includes("share")) {
-              shareCol = k;
               break;
             }
           }
@@ -254,25 +243,44 @@ function excelYukle(input) {
       }
 
       if (headerIdx < 0) {
-        lg("Trademap formati tanınamadı. Header bulunamadı.", "er");
+        lg("Trademap formati taninamadi. Header bulunamadi.", "er");
         return;
       }
 
+      if (lastValCol < 0) {
+        lg("Yil kolonu bulunamadi.", "er");
+        return;
+      }
+
+      // Ham degerlerini topla (string olarak)
+      var toplamHam = 0;
+      var satirlar = [];
       for (var r = headerIdx + 1; r < data.length; r++) {
         var row = data[r];
         if (!row || !row[0]) continue;
         var ulke = String(row[0]).trim();
-        var val = lastValCol >= 0 ? String(row[lastValCol] || "").trim() : "";
-        var share = shareCol >= 0 ? String(row[shareCol] || "").trim() : "";
-        if (!val) continue;
+        var valStr = String(row[lastValCol] || "").trim().replace(/[^0-9.-]/g, "");
+        var val = parseFloat(valStr);
+        if (!valStr || isNaN(val)) continue;
         if (ulke === "World") {
-          tmToplam = val + " USD thousand";
+          toplamHam = val;
         } else if (ulke && ulke !== "Importers") {
-          tmUlkeler.push([ulke, val + " USD thousand", share ? share + "%" : ""]);
+          satirlar.push([ulke, val]);
         }
       }
 
-      tmUlkeler = tmUlkeler.slice(0, 10);
+      // USD thousand oldugu icin *1000 yap
+      var toplamUSD = toplamHam * 1000;
+      tmToplam = "$" + toplamUSD.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+
+      // Her ulke icin hacim ve pay hesapla
+      satirlar.slice(0, 10).forEach(function(s) {
+        var hacimUSD = s[1] * 1000;
+        var pay = toplamUSD > 0 ? ((hacimUSD / toplamUSD) * 100).toFixed(2) + "%" : "";
+        var hacimStr = "$" + hacimUSD.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+        tmUlkeler.push([s[0], hacimStr, pay]);
+      });
+
       lg("Excel okundu: " + tmUlkeler.length + " ulke, Toplam: " + tmToplam, "ok");
       document.getElementById("devam-btn").style.display = "block";
     } catch(err) {
@@ -297,7 +305,6 @@ async function run() {
   ss(0);
 
   try {
-    // ADIM 1: GTIP
     lg("GTIP belirleniyor...");
     var gSys = "Sen Turkiye Gumruk Tarife Istatistik Pozisyonu (GTIP) konusunda uzman bir dis ticaret danismanisin. Verilen urune en uygun GTIP kodunu bul. YALNIZCA asagidaki JSON formatinda yanit ver:\n{\"hs12\":\"XXXXXXXXXXXX\",\"hs6\":\"XXXXXX\",\"hs4\":\"XXXX\",\"aciklama\":\"urun aciklamasi\",\"kategori\":\"sektor adi\"}\nhs12 tam 12 rakam olmali, gercek ve gecerli Turkiye GTIP kodu ver. Ornek: 420291000090, 720811000011";
     var gUsr;
@@ -316,7 +323,6 @@ async function run() {
     gGtip = gJson;
     lg("GTIP: " + gJson.hs12 + " - " + gJson.aciklama, "ok");
 
-    // Trademap linkini olustur ve kutuyu goster
     var tmUrl = "https://www.trademap.org/Country_SelProductCountry.aspx?nvpm=1%7c792%7c%7c%7c%7c" + gJson.hs6 + "%7c%7c%7c6%7c1%7c1%7c2%7c2%7c1%7c2%7c1%7c1%7c1";
     document.getElementById("tm-link").href = tmUrl;
     document.getElementById("tm-box").style.display = "block";
