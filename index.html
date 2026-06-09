@@ -382,6 +382,19 @@ async function run() {
     if (not) gUsr2 += "\nEk bilgi: " + not;
    gUsr2 += listeStr;
     gUsr2 += "\n\nYukaridaki listeden en uygun 3-5 GTIP kodunu sec.";
+    // Arama terimlerini Ingilizce'ye cevir
+    if (onFiltreListesi.length === 0) {
+      lg("Turkce arama eslesemedi, Ingilizce'ye ceviriliyor...", "inf");
+      var ceviriSys = "Translate the following Turkish product/company terms to English keywords suitable for HS code search. Return ONLY a comma-separated list of English keywords, nothing else.";
+      var ceviriUsr = aramaMetni;
+      var ceviriRaw = await ai(ceviriSys, ceviriUsr, true);
+      var ingMetni = ceviriRaw.trim().toLowerCase();
+      lg("Ingilizce arama: " + ingMetni.substring(0, 100), "inf");
+      onFiltreListesi = gtipOnFiltreleme(ingMetni);
+      listeStr = onFiltreListesi.length > 0
+        ? "\n\nARAYABILECEGIN GTIP LISTESI (SADECE bu listeden sec):\n" + onFiltreListesi.map(function(g){ return g.code + " — " + g.label; }).join("\n")
+        : "";
+    }
     lg("Filtrelenen GTIP sayisi: " + onFiltreListesi.length, "inf");
     var gRaw2 = await ai(gSys2, gUsr2, true);
     lg("AI yaniti: " + gRaw2.substring(0, 200), "inf");
