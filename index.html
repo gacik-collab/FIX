@@ -452,7 +452,7 @@ async function devamEt() {
     lg("Potansiyel musteriler arastiriliyor...");
     var mSys = "Sen uluslararasi B2B ticaret uzmanisın. YALNIZCA JSON formatinda yanit ver:\n{\"firmalar\":[[\"firma adi\",\"ulke\",\"sektor\"]]}";
     var mUsr = "Urun: " + gGtip.aciklama + " (GTIP: " + gGtip.hs12 + ")\nBu urunu ithal eden GERCEK uluslararasi 8-10 firma listele.";
-    var mRaw = await ai(mSys, mUsr, false);
+    var mRaw = await ai(mSys, mUsr, true);
     var mObj = pj(mRaw) || {};
     var fArr = safeArr(mObj, "firmalar");
     fArr = fArr.filter(function(f) { return Array.isArray(f) && f.length >= 1; });
