@@ -380,9 +380,11 @@ async function run() {
     var gUsr2 = "Firma: " + firma;
     if (website) gUsr2 += "\nWeb sitesi: " + website;
     if (not) gUsr2 += "\nEk bilgi: " + not;
-    gUsr2 += listeStr;
+   gUsr2 += listeStr;
     gUsr2 += "\n\nYukaridaki listeden en uygun 3-5 GTIP kodunu sec.";
+    lg("Filtrelenen GTIP sayisi: " + onFiltreListesi.length, "inf");
     var gRaw2 = await ai(gSys2, gUsr2, true);
+    lg("AI yaniti: " + gRaw2.substring(0, 200), "inf");
     var gJson2 = pj(gRaw2);
     var secenekler = safeArr(gJson2, "secenekler");
 
