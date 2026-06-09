@@ -65,28 +65,45 @@ export default async function handler(req, res) {
     const { system, user, useHaiku, useWebSearch } = body;
     if (!system || !user) return res.status(400).json({error:'system ve user gerekli'});
     const model = useHaiku ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
-    const bodyObj = {
-      model,
-      max_tokens: 2000,
-      messages: [{role:'user', content: system + '\n\n' + user}]
-    };
-    if (useWebSearch) bodyObj.tools = [{type: 'web_search_20250305', name: 'web_search'}];
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify(bodyObj)
-    });
-    if (!response.ok) {
-      const err = await response.text();
-      return res.status(500).json({error:'Anthropic API hatasi: '+err});
+    const maxTokens = useWebSearch ? 4000 : 2000;
+    const messages = [{role:'user', content: system + '\n\n' + user}];
+    const tools = useWebSearch ? [{type: 'web_search_20250305', name: 'web_search'}] : undefined;
+
+    let finalText = '';
+    for (let turn = 0; turn < 8; turn++) {
+      const bodyObj = { model, max_tokens: maxTokens, messages };
+      if (tools) bodyObj.tools = tools;
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify(bodyObj)
+      });
+      if (!response.ok) {
+        const err = await response.text();
+        return res.status(500).json({error:'Anthropic API hatasi: '+err});
+      }
+      const data = await response.json();
+      const textBlocks = data.content?.filter(b => b.type === 'text') || [];
+      if (textBlocks.length > 0) {
+        finalText = textBlocks.map(b => b.text).join('');
+      }
+      if (data.stop_reason === 'end_turn' || data.stop_reason === 'stop_sequence') break;
+      const toolUseBlocks = data.content?.filter(b => b.type === 'tool_use') || [];
+      if (toolUseBlocks.length === 0) break;
+      messages.push({ role: 'assistant', content: data.content });
+      const toolResults = toolUseBlocks.map(tu => ({
+        type: 'tool_result',
+        tool_use_id: tu.id,
+        content: '(web search tamamlandi)'
+      }));
+      messages.push({ role: 'user', content: toolResults });
     }
-    const data = await response.json();
-    const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
-    return res.status(200).json({text});
+
+    return res.status(200).json({text: finalText});
   } catch(e) {
     return res.status(500).json({error:e.message});
   }
