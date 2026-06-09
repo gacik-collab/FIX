@@ -78,19 +78,14 @@ tr:hover td{background:#f8faff}
     <label>Musteri / Firma Adi</label>
     <input type="text" id="firma" placeholder="ornek: Arcelik, CMK Kagit, ABC Ltd...">
     <p class="hint">Dosya adi: <strong>FIRMA ADI - ON CALISMA</strong> olarak kaydedilir</p>
-
     <div class="sep"></div>
-
     <label>GTİP Kodu <span class="optional-tag">(opsiyonel — 12 hane, biliyorsaniz yazin)</span></label>
     <input type="text" id="gtip" placeholder="ornek: 870829909012">
-
     <label style="margin-top:16px">Web Sitesi <span class="optional-tag">(opsiyonel — firma analizi icin)</span></label>
     <input type="text" id="website" placeholder="ornek: www.firmam.com.tr">
     <p class="hint">Girilirse: Firma Profili, Rakip Analizi, FIX Onerisi bolumleri de doldurulur</p>
-
     <label>Not / Ek Bilgi <span class="optional-tag">(opsiyonel)</span></label>
-    <textarea id="not" placeholder="Urun aciklamasi, hedef pazar, ozel notlar... (Claude'un dogru analiz yapmasina yardimci olur)"></textarea>
-
+    <textarea id="notlar" placeholder="Urun aciklamasi, hedef pazar, ozel notlar... (Claude'un dogru analiz yapmasina yardimci olur)"></textarea>
     <button id="btn" onclick="run()">Raporu Otomatik Hazirla</button>
   </div>
 
@@ -130,15 +125,16 @@ fetch('/gtip_data.json').then(function(r){return r.json();}).then(function(d){gt
 
 function gtipDogrula(hs12) {
   if (!gtipDB.length) return null;
-  var kod = hs12.replace(/'/g,'').trim();
+  var kod = String(hs12).replace(/'/g,'').trim();
   return gtipDB.find(function(g){ return g.code === kod; }) || null;
 }
 
-function gtipOnFiltreleme(kelimeler) {
+function gtipOnFiltreleme(ingKelimeler) {
   if (!gtipDB.length) return [];
   try {
-    var aramaStr = String(kelimeler || "").toLowerCase();
+    var aramaStr = String(ingKelimeler || "").toLowerCase();
     var kelimeListesi = aramaStr.split(/[\s,]+/).filter(function(k){ return k.length > 2; });
+    if (kelimeListesi.length === 0) return [];
     var sonuclar = gtipDB.filter(function(g) {
       if (!g || !g.label) return false;
       var label = String(g.label).toLowerCase();
@@ -245,7 +241,6 @@ function excelYukle(input) {
       tmUlkeler = [];
       tmToplam = "";
       var data = [];
-
       var text = new TextDecoder("utf-8").decode(new Uint8Array(e.target.result));
       if (text.indexOf("<!DOCTYPE") >= 0 || text.indexOf("<html") >= 0) {
         data = parseHtmlXls(text);
@@ -254,7 +249,6 @@ function excelYukle(input) {
         var ws = wb.Sheets[wb.SheetNames[0]];
         data = XLSX.utils.sheet_to_json(ws, {header: 1});
       }
-
       var headerIdx = -1;
       var lastValCol = -1;
       for (var i = 0; i < data.length; i++) {
@@ -270,10 +264,8 @@ function excelYukle(input) {
           break;
         }
       }
-
       if (headerIdx < 0) { lg("Trademap formati taninamadi. Header bulunamadi.", "er"); return; }
       if (lastValCol < 0) { lg("Yil kolonu bulunamadi.", "er"); return; }
-
       var toplamHam = 0;
       var satirlar = [];
       for (var r = headerIdx + 1; r < data.length; r++) {
@@ -289,17 +281,14 @@ function excelYukle(input) {
           satirlar.push([ulke, val]);
         }
       }
-
       var toplamUSD = toplamHam * 1000;
       tmToplam = "$" + toplamUSD.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
-
       satirlar.slice(0, 10).forEach(function(s) {
         var hacimUSD = s[1] * 1000;
         var pay = toplamUSD > 0 ? ((hacimUSD / toplamUSD) * 100).toFixed(2) + "%" : "";
         var hacimStr = "$" + hacimUSD.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
         tmUlkeler.push([s[0], hacimStr, pay]);
       });
-
       lg("Excel okundu: " + tmUlkeler.length + " ulke, Toplam: " + tmToplam, "ok");
       document.getElementById("devam-btn").style.display = "block";
     } catch(err) {
@@ -324,7 +313,6 @@ function gtipSec(gtipObj) {
   document.getElementById("gtip-secim-box").style.display = "none";
   document.getElementById("lb").style.display = "block";
   lg("GTIP secildi: " + gtipObj.hs12 + " - " + gtipObj.aciklama, "ok");
-
   var tmUrl = "https://www.trademap.org/Country_SelProductCountry.aspx?nvpm=1%7c792%7c%7c%7c%7c" + gtipObj.hs6 + "%7c%7c%7c6%7c1%7c1%7c2%7c2%7c1%7c2%7c1%7c1%7c1";
   document.getElementById("tm-link").href = tmUrl;
   document.getElementById("tm-gtip-bilgi").textContent = "Secilen GTİP: " + gtipObj.hs12 + " — " + gtipObj.aciklama;
@@ -337,7 +325,7 @@ async function run() {
   var firma = document.getElementById("firma").value.trim();
   var gtipGirdi = document.getElementById("gtip").value.trim();
   var website = document.getElementById("website").value.trim();
-  var not = document.getElementById("not").value.trim();
+  var notlar = document.getElementById("notlar").value.trim();
 
   if (!firma) { alert("Firma adi girin!"); return; }
 
@@ -352,82 +340,68 @@ async function run() {
   try {
     lg("GTIP belirleniyor...");
 
-    // GTIP direkt girilmisse tek secenekle gec
+    // GTIP direkt girilmisse JSON'da dogrula ve sec
     if (gtipGirdi && gtipGirdi.length === 12) {
-      var gSys = "Sen Turkiye Gumruk Tarife Istatistik Pozisyonu (GTIP) uzmanisisin. YALNIZCA JSON formatinda yanit ver:\n{\"hs12\":\"XXXXXXXXXXXX\",\"hs6\":\"XXXXXX\",\"aciklama\":\"urun aciklamasi\",\"kategori\":\"sektor adi\"}";
-      var gUsr = "GTIP kodu: " + gtipGirdi + "\nFirma: " + firma;
-      if (not) gUsr += "\nEk bilgi: " + not;
-      gUsr += "\nBu kod icin bilgileri JSON olarak don.";
-      var gRaw = await ai(gSys, gUsr, true);
-      var gJson = pj(gRaw);
-      if (!gJson || !gJson.hs12) throw new Error("GTIP bilgileri alinamadi.");
-      if (!gJson.hs6 || gJson.hs6.length < 6) gJson.hs6 = gJson.hs12.substring(0, 6);
+      var dbSonuc = gtipDogrula(gtipGirdi);
+      var gObj = {
+        hs12: gtipGirdi,
+        hs6: gtipGirdi.substring(0, 6),
+        aciklama: dbSonuc ? dbSonuc.label : gtipGirdi,
+        kategori: ""
+      };
       running = false;
       document.getElementById("btn").disabled = false;
-      gtipSec(gJson);
+      gtipSec(gObj);
       return;
     }
 
-    // GTIP bilinmiyorsa 3-5 secenek sun
-    // JSON'dan on filtreleme
-    var aramaMetni = (firma + " " + (document.getElementById("not").value || "") + " " + (document.getElementById("website").value || "")).toLowerCase();
-    var onFiltreListesi = gtipOnFiltreleme(aramaMetni);
+    // GTIP bilinmiyorsa:
+    // ADIM 1: Notlari Ingilizce'ye cevir
+    var ceviriKaynak = notlar || firma;
+    lg("Urun tanimlari ceziriliyor...", "inf");
+    var ceviriRaw = await ai(
+      "Translate the following text to English. Return ONLY the translated words, no explanations.",
+      ceviriKaynak,
+      true
+    );
+    var ingMetni = ceviriRaw.replace(/[^a-zA-Z0-9\s,]/g, " ").toLowerCase().trim();
+    lg("Ingilizce: " + ingMetni.substring(0, 80), "inf");
+
+    // ADIM 2: JSON'da filtrele
+    var onFiltreListesi = gtipOnFiltreleme(ingMetni);
+    lg("Eslesen GTIP sayisi: " + onFiltreListesi.length, "inf");
+
+    // ADIM 3: Claude'a gonder
     var listeStr = onFiltreListesi.length > 0
-      ? "\n\nARAYABILECEGIN GTIP LISTESI (SADECE bu listeden sec):\n" + onFiltreListesi.map(function(g){ return g.code + " — " + g.label; }).join("\n")
+      ? "\n\nTURKIYE GTIP DATABASE (SADECE bu listeden sec):\n" + onFiltreListesi.map(function(g){ return g.code + " — " + g.label; }).join("\n")
       : "";
 
-    var gSys2 = "Sen Turkiye Gumruk Tarife Istatistik Pozisyonu (GTIP) uzmanisisin. Sana bir GTIP listesi verilecek. Bu listeden verilen firma ve urun bilgisine gore en uygun 3-5 GTIP sec. Listede olmayan kod kullanma. YALNIZCA JSON formatinda yanit ver:\n{\"secenekler\":[{\"hs12\":\"XXXXXXXXXXXX\",\"hs6\":\"XXXXXX\",\"aciklama\":\"urun aciklamasi\",\"kategori\":\"sektor\",\"neden\":\"neden bu kod uygun\"}]}";
+    var gSys2 = "Sen Turkiye GTIP uzmanisisin. Verilen firma ve urun bilgisine gore en uygun 3-5 GTIP kodunu sec." + (onFiltreListesi.length > 0 ? " SADECE asagidaki listeden sec, listede olmayan kod kullanma." : " Gercek ve gecerli 12 haneli Turkiye GTIP kodlari ver.") + " YALNIZCA JSON formatinda yanit ver:\n{\"secenekler\":[{\"hs12\":\"XXXXXXXXXXXX\",\"hs6\":\"XXXXXX\",\"aciklama\":\"urun aciklamasi\",\"neden\":\"neden bu kod uygun\"}]}";
+
     var gUsr2 = "Firma: " + firma;
     if (website) gUsr2 += "\nWeb sitesi: " + website;
-    if (not) gUsr2 += "\nEk bilgi: " + not;
-   gUsr2 += listeStr;
-    gUsr2 += "\n\nYukaridaki listeden en uygun 3-5 GTIP kodunu sec.";
-    // Arama terimlerini Ingilizce'ye cevir
-    if (onFiltreListesi.length === 0) {
-      lg("Turkce arama eslesemedi, Ingilizce'ye ceviriliyor...", "inf");
-      var ceviriSys = "Translate the following Turkish product/company terms to English keywords suitable for HS code search. Return ONLY a comma-separated list of English keywords, nothing else.";
-      var ceviriUsr = aramaMetni;
-      var ceviriRaw = await ai(ceviriSys, ceviriUsr, true);
-      var ingMetni = ceviriRaw.trim().toLowerCase();
-      lg("Ingilizce arama: " + ingMetni.substring(0, 100), "inf");
-      onFiltreListesi = gtipOnFiltreleme(ingMetni);
-      listeStr = onFiltreListesi.length > 0
-        ? "\n\nARAYABILECEGIN GTIP LISTESI (SADECE bu listeden sec):\n" + onFiltreListesi.map(function(g){ return g.code + " — " + g.label; }).join("\n")
-        : "";
-    }
-    lg("Filtrelenen GTIP sayisi: " + onFiltreListesi.length, "inf");
+    if (notlar) gUsr2 += "\nUrun/Not: " + notlar;
+    gUsr2 += listeStr;
+    gUsr2 += "\n\nEn uygun 3-5 GTIP kodunu sec ve JSON olarak don.";
+
     var gRaw2 = await ai(gSys2, gUsr2, true);
-    lg("AI yaniti: " + gRaw2.substring(0, 200), "inf");
     var gJson2 = pj(gRaw2);
     var secenekler = safeArr(gJson2, "secenekler");
 
     if (!secenekler || secenekler.length === 0) throw new Error("GTIP secenek listesi alinamadi.");
 
-    // JSON'da dogrula
-    var dogrulanmis = [];
+    // Secenekleri goster
+    var optBox = document.getElementById("gtip-options");
+    optBox.innerHTML = "";
     secenekler.forEach(function(s) {
       if (!s.hs6 || s.hs6.length < 6) s.hs6 = s.hs12.substring(0, 6);
       var db = gtipDogrula(s.hs12);
-      if (db) {
-        s.aciklama = db.label;
-        dogrulanmis.push(s);
-      } else {
-        dogrulanmis.push(s); // DB'de bulunamasa da goster
-      }
-    });
-
-    // Secenek kutusunu goster
-    var optBox = document.getElementById("gtip-options");
-    optBox.innerHTML = "";
-    dogrulanmis.forEach(function(s) {
-      var db = gtipDogrula(s.hs12);
+      if (db) s.aciklama = db.label; // DB'deki gercek tanimi kullan
       var btn = document.createElement("button");
       btn.className = "gtip-option";
-      var dogruTag = db ? " ✅" : " ⚠️";
-      btn.innerHTML = "<strong>" + s.hs12 + dogruTag + " — " + s.aciklama + "</strong><span>" + (s.neden || s.kategori || "") + "</span>";
-      btn.onclick = (function(gtipObj) {
-        return function() { gtipSec(gtipObj); };
-      })(s);
+      var tag = db ? " ✅" : " ⚠️";
+      btn.innerHTML = "<strong>" + s.hs12 + tag + " — " + s.aciklama + "</strong><span>" + (s.neden || "") + "</span>";
+      btn.onclick = (function(obj){ return function(){ gtipSec(obj); }; })(s);
       optBox.appendChild(btn);
     });
 
@@ -454,7 +428,7 @@ async function devamEt() {
 
   var firma = document.getElementById("firma").value.trim();
   var website = document.getElementById("website").value.trim();
-  var not = document.getElementById("not").value.trim();
+  var notlar = document.getElementById("notlar").value.trim();
 
   try {
     var pUlk = tmUlkeler;
@@ -466,7 +440,7 @@ async function devamEt() {
     lg("Hedef sektorler belirleniyor...");
     var sSys = "Sen ihracat uzmanisisin. Turkiye'nin bu urunu ihrac edebilecegi yurt disindaki musteri segmentlerini belirle. KURALLAR: 1) Listede tam olarak 1 adet distributor satiri olmali — urune ozel isimlendir (ornek: Tarim Ilac Distributoru, Endustriyel Ekipman Distributoru). Diger satirlara distributor yazma. 2) Sektorler birbirinden farkli olmali, tekrar etmemeli. 3) Her sektor yurt disindaki gercek bir alici tipini temsil etmeli. 4) 6-8 farkli segment listele. 5) Aciklama kismi o segmentin bu urunu neden ithal edecegini net sekilde anlat. YALNIZCA JSON formatinda yanit ver:\n{\"sektorler\":[[\"sektor adi\",\"aciklama\"]]}";
     var sUsr = "Urun: " + gGtip.aciklama + " (GTIP: " + gGtip.hs12 + ")\n";
-    if (not) sUsr += "Ek bilgi: " + not + "\n";
+    if (notlar) sUsr += "Ek bilgi: " + notlar + "\n";
     sUsr += "Bu urunu yurt disinda satin alabilecek musteri segmentlerini listele.";
     var sRaw = await ai(sSys, sUsr, true);
     var sObj = pj(sRaw) || {};
@@ -491,7 +465,7 @@ async function devamEt() {
       lg("FIX analiz bolumleri hazirlaniyor...");
       var aSys = "Sen FIX Danismanlik A.S. adina ihracat on calisma raporu hazirlayan kıdemli bir dis ticaret danismanisin. Verilen firma web sitesini ve urun bilgisini kullanarak firmayı arastir. YALNIZCA asagidaki JSON formatinda yanit ver, baska hicbir sey yazma, markdown yok:\n{\"yorum_blogu\":\"Ulkeler tablosunun altina gelecek, firmaya ozel 3-4 cumle analiz. Hangi pazarin neden oncelikli oldugunu FIX diliyle acikla.\",\"firma_profili\":\"Firma kunyesi ve degerlendirme. Format:\\nFirma: ...\\nSektor: ...\\nKurulus: ...\\nMerkez: ...\\nWeb: ...\\nIhracat: ...\\n\\n✅ Mevcut ve guclu:\\n- ...\\n🔶 Gelistirme firsati:\\n- ...\\n🔷 Oncelikli gelisim alani:\\n- ...\",\"turk_rakip\":\"Turk rakip adi + firmayla konumlanma farki analizi (2-3 paragraf, FIX diliyle)\",\"kazanilabilir_bosluklar\":\"4-6 madde FIX diliyle. Her madde tire ile baslasin.\",\"fix_onerisi\":\"UTD/KIVIG model yonlendirmesi, oncelikli pazar/kategori, marka mesaji, ilk adim, TURQUALITY destegi. FIX is ortagi tonu.\"}\n\nFIX DILI ZORUNLU: eksik/yetersiz/problem/reddedilir KULLANMA. Yerine: gelistirme firsati, bir ust seviyeye tasiyalim, one gecme potansiyeli yuksek, birlikte degerlendirebiliriz. Ton: rapor sunan degil sureci yoneten is ortagi.";
       var aUsr = "Firma: " + firma + "\nWeb sitesi: " + website + "\nUrun/GTIP: " + gGtip.aciklama + " (" + gGtip.hs12 + ")";
-      if (not) aUsr += "\nEk bilgi: " + not;
+      if (notlar) aUsr += "\nEk bilgi: " + notlar;
       var aRaw = await ai(aSys, aUsr, false);
       var aObj = pj(aRaw) || {};
       yorumBlogu = aObj.yorum_blogu || "";
