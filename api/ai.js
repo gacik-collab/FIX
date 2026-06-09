@@ -60,6 +60,8 @@ export default async function handler(req, res) {
       if (data) return res.status(200).json(data);
       return res.status(200).json({toplam:'', ulkeler:[]});
     }
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(500).json({error:'ANTHROPIC_API_KEY tanimli degil'});
     const { system, user, useHaiku, useWebSearch } = body;
     if (!system || !user) return res.status(400).json({error:'system ve user gerekli'});
     const model = useHaiku ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
