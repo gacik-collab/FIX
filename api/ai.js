@@ -60,11 +60,15 @@ export default async function handler(req, res) {
       if (data) return res.status(200).json(data);
       return res.status(200).json({toplam:'', ulkeler:[]});
     }
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) return res.status(500).json({error:'ANTHROPIC_API_KEY tanimli degil'});
-    const { system, user, useHaiku } = body;
+    const { system, user, useHaiku, useWebSearch } = body;
     if (!system || !user) return res.status(400).json({error:'system ve user gerekli'});
     const model = useHaiku ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
+    const bodyObj = {
+      model,
+      max_tokens: 2000,
+      messages: [{role:'user', content: system + '\n\n' + user}]
+    };
+    if (useWebSearch) bodyObj.tools = [{type: 'web_search_20250305', name: 'web_search'}];
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -72,12 +76,7 @@ export default async function handler(req, res) {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
-      body: JSON.stringify({
-        model,
-        max_tokens: 2000,
-        tools: [{type: 'web_search_20250305', name: 'web_search'}],
-        messages: [{role:'user', content: system + '\n\n' + user}]
-      })
+      body: JSON.stringify(bodyObj)
     });
     if (!response.ok) {
       const err = await response.text();

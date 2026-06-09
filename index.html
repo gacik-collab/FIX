@@ -178,9 +178,10 @@ function safeArr(o, k) {
   return [];
 }
 
-async function ai(s, u, haiku) {
+async function ai(s, u, haiku, webSearch) {
   var body = {system: s, user: u};
   if (haiku) body.useHaiku = true;
+  if (webSearch) body.useWebSearch = true;
   var r = await fetch("/api/ai", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
@@ -466,7 +467,7 @@ async function devamEt() {
       var aSys = "Sen FIX Danismanlik A.S. adina ihracat on calisma raporu hazirlayan kıdemli bir dis ticaret danismanisin. Verilen firma web sitesini ve urun bilgisini kullanarak firmayı arastir. YALNIZCA asagidaki JSON formatinda yanit ver, baska hicbir sey yazma, markdown yok:\n{\"yorum_blogu\":\"Ulkeler tablosunun altina gelecek, firmaya ozel 3-4 cumle analiz. Hangi pazarin neden oncelikli oldugunu FIX diliyle acikla.\",\"firma_profili\":\"Firma kunyesi ve degerlendirme. Format:\\nFirma: ...\\nSektor: ...\\nKurulus: ...\\nMerkez: ...\\nWeb: ...\\nIhracat: ...\\n\\n✅ Mevcut ve guclu:\\n- ...\\n🔶 Gelistirme firsati:\\n- ...\\n🔷 Oncelikli gelisim alani:\\n- ...\",\"turk_rakip\":\"Turk rakip adi + firmayla konumlanma farki analizi (2-3 paragraf, FIX diliyle)\",\"kazanilabilir_bosluklar\":\"4-6 madde FIX diliyle. Her madde tire ile baslasin.\",\"fix_onerisi\":\"UTD/KIVIG model yonlendirmesi, oncelikli pazar/kategori, marka mesaji, ilk adim, TURQUALITY destegi. FIX is ortagi tonu.\"}\n\nFIX DILI ZORUNLU: eksik/yetersiz/problem/reddedilir KULLANMA. Yerine: gelistirme firsati, bir ust seviyeye tasiyalim, one gecme potansiyeli yuksek, birlikte degerlendirebiliriz. Ton: rapor sunan degil sureci yoneten is ortagi.";
       var aUsr = "Firma: " + firma + "\nWeb sitesi: " + website + "\nUrun/GTIP: " + gGtip.aciklama + " (" + gGtip.hs12 + ")";
       if (notlar) aUsr += "\nEk bilgi: " + notlar;
-      var aRaw = await ai(aSys, aUsr, false);
+      var aRaw = await ai(aSys, aUsr, false, true);
       var aObj = pj(aRaw) || {};
       yorumBlogu = aObj.yorum_blogu || "";
       firmaProfili = aObj.firma_profili || "";
