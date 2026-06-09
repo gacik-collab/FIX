@@ -136,13 +136,16 @@ function gtipDogrula(hs12) {
 
 function gtipOnFiltreleme(kelimeler) {
   if (!gtipDB.length) return [];
-  var aramaStr = kelimeler.toLowerCase();
-  var kelimeListesi = aramaStr.split(/[\s,]+/).filter(function(k){ return k.length > 2; });
-  var sonuclar = gtipDB.filter(function(g) {
-    var label = g.label.toLowerCase();
-    return kelimeListesi.some(function(k){ return label.includes(k); });
-  });
-  return sonuclar.slice(0, 80);
+  try {
+    var aramaStr = String(kelimeler || "").toLowerCase();
+    var kelimeListesi = aramaStr.split(/[\s,]+/).filter(function(k){ return k.length > 2; });
+    var sonuclar = gtipDB.filter(function(g) {
+      if (!g || !g.label) return false;
+      var label = String(g.label).toLowerCase();
+      return kelimeListesi.some(function(k){ return label.includes(k); });
+    });
+    return sonuclar.slice(0, 80);
+  } catch(e) { return []; }
 }
 
 function ss(n) {
