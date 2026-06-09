@@ -367,7 +367,7 @@ async function run() {
 
     // GTIP bilinmiyorsa 3-5 secenek sun
     // JSON'dan on filtreleme
-    var aramaMetni = (firma + " " + (not || "") + " " + (website || "")).toLowerCase();
+    var aramaMetni = (firma + " " + (document.getElementById("not").value || "") + " " + (document.getElementById("website").value || "")).toLowerCase();
     var onFiltreListesi = gtipOnFiltreleme(aramaMetni);
     var listeStr = onFiltreListesi.length > 0
       ? "\n\nARAYABILECEGIN GTIP LISTESI (SADECE bu listeden sec):\n" + onFiltreListesi.map(function(g){ return g.code + " — " + g.label; }).join("\n")
