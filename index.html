@@ -344,7 +344,7 @@ async function run() {
     // GTIP direkt girilmisse JSON'da dogrula ve sec
     if (gtipGirdi && gtipGirdi.length === 12) {
         var dbSonuc = gtipDogrula(gtipGirdi);
-        var trAciklama = await ai("Su GTIP kodunun Turkce kisa aciklamasini yaz, maksimum 10 kelime, sadece aciklamayi yaz baska hicbir sey yazma: " + (dbSonuc ? dbSonuc.label : gtipGirdi), "", true);
+        var trAciklama = await ai("GTIP kodunun Turkce kisa aciklamasini yaz. Maksimum 10 kelime, sadece aciklamayi yaz.", "GTIP: " + gtipGirdi + (dbSonuc ? " - " + dbSonuc.label : ""), true);
         var gObj = {
           hs12: gtipGirdi,
           hs6: gtipGirdi.substring(0, 6),
