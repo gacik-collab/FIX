@@ -343,18 +343,19 @@ async function run() {
 
     // GTIP direkt girilmisse JSON'da dogrula ve sec
     if (gtipGirdi && gtipGirdi.length === 12) {
-      var dbSonuc = gtipDogrula(gtipGirdi);
-      var gObj = {
-        hs12: gtipGirdi,
-        hs6: gtipGirdi.substring(0, 6),
-        aciklama: dbSonuc ? dbSonuc.label : gtipGirdi,
-        kategori: ""
-      };
-      running = false;
-      document.getElementById("btn").disabled = false;
-      gtipSec(gObj);
-      return;
-    }
+        var dbSonuc = gtipDogrula(gtipGirdi);
+        var trAciklama = await ai("Su GTIP kodunun Turkce kisa aciklamasini yaz, maksimum 10 kelime, sadece aciklamayi yaz baska hicbir sey yazma: " + (dbSonuc ? dbSonuc.label : gtipGirdi), "", true);
+        var gObj = {
+          hs12: gtipGirdi,
+          hs6: gtipGirdi.substring(0, 6),
+          aciklama: trAciklama.trim() || gtipGirdi,
+          kategori: ""
+        };
+        running = false;
+        document.getElementById("btn").disabled = false;
+        gtipSec(gObj);
+        return;
+      }
 
     // GTIP bilinmiyorsa:
     // ADIM 1: Notlari Ingilizce'ye cevir
