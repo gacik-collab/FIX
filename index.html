@@ -377,7 +377,7 @@ async function run() {
       ? "\n\nTURKIYE GTIP DATABASE (SADECE bu listeden sec):\n" + onFiltreListesi.map(function(g){ return g.code + " — " + g.label; }).join("\n")
       : "";
 
-    var gSys2 = "Sen Turkiye GTIP uzmanisisin. Verilen firma ve urun bilgisine gore en uygun 3-5 GTIP kodunu sec." + (onFiltreListesi.length > 0 ? " SADECE asagidaki listeden sec, listede olmayan kod kullanma." : " Gercek ve gecerli 12 haneli Turkiye GTIP kodlari ver.") + " YALNIZCA JSON formatinda yanit ver:\n{\"secenekler\":[{\"hs12\":\"XXXXXXXXXXXX\",\"hs6\":\"XXXXXX\",\"aciklama\":\"urun aciklamasi Turkce\",\"neden\":\"neden bu kod uygun\"}]}
+    var gSys2 = "Sen Turkiye GTIP uzmanisisin. Verilen firma ve urun bilgisine gore en uygun 3-5 GTIP kodunu sec." + (onFiltreListesi.length > 0 ? " SADECE asagidaki listeden sec, listede olmayan kod kullanma." : " Gercek ve gecerli 12 haneli Turkiye GTIP kodlari ver.") + " YALNIZCA JSON formatinda yanit ver:\n{\"secenekler\":[{\"hs12\":\"XXXXXXXXXXXX\",\"hs6\":\"XXXXXX\",\"aciklama\":\"urun aciklamasi MUTLAKA TURKCE yaz, Ingilizce kullanma\",\"neden\":\"neden bu kod uygun\"}]}
 
     var gUsr2 = "Firma: " + firma;
     if (website) gUsr2 += "\nWeb sitesi: " + website;
