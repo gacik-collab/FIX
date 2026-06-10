@@ -347,7 +347,7 @@ async function run() {
       var gObj = {
         hs12: gtipGirdi,
         hs6: gtipGirdi.substring(0, 6),
-        aciklama: dbSonuc ? dbSonuc.label : gtipGirdi,
+        aciklama: gtipGirdi,
         kategori: ""
       };
       running = false;
@@ -397,7 +397,7 @@ async function run() {
     secenekler.forEach(function(s) {
       if (!s.hs6 || s.hs6.length < 6) s.hs6 = s.hs12.substring(0, 6);
       var db = gtipDogrula(s.hs12);
-      if (db) s.aciklama = db.label; // DB'deki gercek tanimi kullan
+      // DB dogrulamasi yapildi ama aciklama Claude'dan geliyor
       var btn = document.createElement("button");
       btn.className = "gtip-option";
       var tag = db ? " ✅" : " ⚠️";
