@@ -453,7 +453,7 @@ async function devamEt() {
     // ADIM 4: Musteriler
     lg("Potansiyel musteriler arastiriliyor...");
     var mSys = "Sen uluslararasi B2B ticaret uzmanisın. YALNIZCA JSON formatinda yanit ver:\n{\"firmalar\":[[\"firma adi\",\"ulke\",\"sektor\"]]}";
-    var mUsr = "Urun: " + gGtip.aciklama + " (GTIP: " + gGtip.hs12 + ")\nBu urunu ithal eden veya kullanan GERCEK uluslararasi 8-10 firma listele. KURAL: Siemens, ABB, Bosch, Schneider gibi cok buyuk holdingleri YAZMA. Bunun yerine: orta olcekli uretici, OEM tedarikci, makine imalatcisi, sektorel distributorleri sec. Turkiye'den yeni bir tedarikciyle gorusmeye acik olabilecek firmalar olmali.";
+    var mUsr = "Urun: " + gGtip.aciklama + " (GTIP: " + gGtip.hs12 + ")\nBu urunu ithal eden GERCEK uluslararasi 8-10 firma listele. KURALLAR: 1) Turkiye firmalari KESINLIKLE yazma. 2) Uretici ve imalatci firmalari YAZMA. 3) Siemens, ABB, Bosch gibi dev holdingleri YAZMA. 4) Sadece su tipleri yaz: ithalatci toptanci, sektorel distributor, ticaret sirketi, B2B tedarik platformu. 5) Turkiye'den yeni tedarikciyle gorusmeye acik olabilecek firmalar olmali.";
     var mRaw = await ai(mSys, mUsr, true);
     var mObj = pj(mRaw) || {};
     var fArr = safeArr(mObj, "firmalar");
