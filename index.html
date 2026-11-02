@@ -408,7 +408,8 @@ function gtipSec(gtipObj) {
   document.getElementById("gtip-secim-box").style.display = "none";
   document.getElementById("lb").style.display = "block";
   lg("GTIP secildi: " + gtipObj.hs6 + " - " + gtipObj.aciklama, "ok");
-  var tmUrl = "https://www.trademap.org/Country_SelProductCountry.aspx?nvpm=1%7c792%7c%7c%7c%7c" + gtipObj.hs6 + "%7c%7c%7c6%7c1%7c1%7c2%7c2%7c1%7c2%7c1%7c1%7c1";
+  // Yeni Trade Map: /exports/c/{raporlayan}/c/{partner}/p/{urun}/byCountry/... (792 = Turkiye, 000 = Dunya)
+  var tmUrl = "https://www.trademap.org/en/goods/time-series/exports/c/792/c/000/p/" + gtipObj.hs6 + "/byCountry/year/default/direct/values/USD/table";
   document.getElementById("tm-link").href = tmUrl;
   document.getElementById("tm-gtip-bilgi").textContent = "Secilen GTİP: " + gtipObj.hs6 + " — " + gtipObj.aciklama;
   document.getElementById("tm-box").style.display = "block";
